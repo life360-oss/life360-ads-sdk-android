@@ -11,7 +11,7 @@
 
     <name> Life360 Ads Android SDK</name>
     <description>Life360 Ads wrapper of the Prebid Mobile Android SDK</description>
-    <url>https://github.com/life360-oss/nativo-prebid-sdk-android</url>
+    <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
 
     <licenses>
         <license>
@@ -51,9 +51,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/life360-oss/nativo-prebid-sdk-android.git</connection>
-        <developerConnection>scm:git:https://github.com/life360-oss/nativo-prebid-sdk-android.git</developerConnection>
-        <url>https://github.com/life360-oss/nativo-prebid-sdk-android</url>
+        <connection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</connection>
+        <developerConnection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</developerConnection>
+        <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
     </scm>
 
     <dependencies>

@@ -4,14 +4,14 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.prebid</groupId>
-    <artifactId>prebid-mobile-sdk-next-gen-event-handlers</artifactId>
+    <groupId>com.life360</groupId>
+    <artifactId>life360-ads-next-gen-event-handlers</artifactId>
     <version>${revision}</version>
     <packaging>jar</packaging>
 
-    <name> Life360 Ads Android SDK</name>
-    <description>Prebid Mobile</description>
-    <url>https://www.prebid.org</url>
+    <name> Life360 Ads Android SDK – Next Gen Event Handlers</name>
+    <description>Life360 Ads wrapper of the next gen event handlers</description>
+    <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
 
     <licenses>
         <license>
@@ -21,6 +21,13 @@
     </licenses>
 
     <developers>
+        <developer>
+            <name>Life360 Ads Team</name>
+            <email>ads@life360.com</email>
+            <organization>Life360, Inc.</organization>
+            <organizationUrl>https://ads.life360.com</organizationUrl>
+        </developer>
+
         <developer>
             <name>AppNexus Mobile Team</name>
             <email>sdk@appnexus.com</email>
@@ -44,15 +51,15 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/prebid/prebid-mobile-android.git</connection>
-        <developerConnection>scm:git:https://github.com/prebid/prebid-mobile-android.git
+        <connection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</connection>
+        <developerConnection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git
         </developerConnection>
-        <url>https://github.com/prebid/prebid-mobile-android</url>
+        <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
     </scm>
 
     <dependencies>
         <dependency>
-            <groupId>org.prebid</groupId>
+            <groupId>com.life360</groupId>
             <artifactId>prebid-mobile-sdk</artifactId>
             <version>${revision}</version>
             <scope>compile</scope>

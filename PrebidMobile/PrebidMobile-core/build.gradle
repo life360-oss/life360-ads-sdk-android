@@ -1,7 +1,6 @@
 apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../android.gradle'
 apply from: '../publisher.gradle'
-apply from: '../tests.gradle'
 
 android {
     namespace "com.life360.ads.core"
@@ -45,4 +44,7 @@ dependencies {
     implementation libs.exoplayer.ui
 
     implementation libs.androidx.localbroadcastmanager
+
+    testImplementation(project(":test-utils"))
+    testImplementation(libs.bundles.test.libraries)
 }
