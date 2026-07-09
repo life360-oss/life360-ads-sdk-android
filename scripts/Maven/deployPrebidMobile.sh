@@ -247,7 +247,6 @@ function setupGPG() {
   fi
 
   read -r -s -p "GPG passphrase for '${GPG_KEYNAME}': " GPG_PASSPHRASE
-  echoX $GPG_PASSPHRASE
 
   export GPG_TTY=${GPG_TTY:-$(tty || true)}
 }

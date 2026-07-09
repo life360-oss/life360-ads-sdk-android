@@ -12,7 +12,7 @@ fi
 set -euo pipefail
 
 function echoX() {
-  echo -e "NATIVO DEPLOY-LOG: $@"
+  echo -e "LIFE360 DEPLOY-LOG: $@"
 }
 
 ####################################################
@@ -85,8 +85,8 @@ while read -r line; do
 done < "../build.gradle"
 [[ -z "${OMSDK_VERSION}" ]] && { echoX "ERROR: could not read omSdkVersion from build.gradle"; exit 1; }
 
-# Use the Nativo life build script (repackaging + NativoPrebidSDK output names)
-bash ./buildPrebidMobile-life.sh
+# Use the Life360 build script (repackaging + Life360AdsSDK output names)
+bash ./buildPrebidMobile.sh
 
 cp -r ../generated/* "$DEPLOY_DIR_ABSOLUTE" || true
 
@@ -176,7 +176,7 @@ sid = sys.argv[1]
 path = os.path.expanduser(sys.argv[2])
 
 def warn(msg):
-    sys.stderr.write(f"NATIVO DEPLOY-LOG: {msg}\n")
+    sys.stderr.write(f"LIFE360 DEPLOY-LOG: {msg}\n")
     sys.stderr.flush()
 
 try:
@@ -259,7 +259,6 @@ function setupGPG() {
   fi
 
   read -r -s -p "GPG passphrase for '${GPG_KEYNAME}': " GPG_PASSPHRASE
-  echoX $GPG_PASSPHRASE
 
   export GPG_TTY=${GPG_TTY:-$(tty || true)}
 }
@@ -268,7 +267,7 @@ setupGPG
 
 # Deploy each module one-by-one.
 # modules array uses the Gradle project names (unchanged); OUTPUT_NAME applies the
-# PrebidMobile → NativoPrebidSDK rename used by buildPrebidMobile-life.sh for all
+# PrebidMobile → Life360AdsSDK rename used by buildPrebidMobile.sh for all
 # output artifact filenames (AAR, JAR, sources, javadoc).
 # POM templates are still looked up by Gradle project name (PrebidMobile-*-pom.xml).
 modules=("PrebidMobile-core" "PrebidMobile" "PrebidMobile-gamEventHandlers" "PrebidMobile-admobAdapters" "PrebidMobile-maxAdapters")

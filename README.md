@@ -60,13 +60,13 @@ The rule is defined in [`PrebidMobile/jarjar-rules.txt`](PrebidMobile/jarjar-rul
 To produce the repackaged `com.life360.ads` artifacts for all modules, run:
 
 ```
-scripts/buildPrebidMobile-life.sh
+scripts/buildPrebidMobile.sh
 ```
 
 Output JARs and AARs are written to `generated/`. To skip JAR extraction and only produce the repackaged AARs, pass `-nojar`:
 
 ```
-scripts/buildPrebidMobile-life.sh -nojar
+scripts/buildPrebidMobile.sh -nojar
 ```
 
 

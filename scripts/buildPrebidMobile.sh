@@ -161,9 +161,9 @@ for n in ${!modules[@]}; do
 
     cd $LIBDIR
 
-    # # Javadoc
-    # echoX "Preparing ${modules[$n]} Javadoc"
-    # ./gradlew -i --no-daemon ${modules[$n]}:javadocJar >$LOGPATH/javadoc.log 2>&1 || die "Build Javadoc failed, check log in $LOGPATH/javadoc.log"
+     # Javadoc
+     echoX "Preparing ${modules[$n]} Javadoc"
+     ./gradlew -i --no-daemon ${modules[$n]}:javadocJar >$LOGPATH/javadoc.log 2>&1 || die "Build Javadoc failed, check log in $LOGPATH/javadoc.log"
 
     # Sources
     echoX "Preparing ${OUTPUT_NAME} sources"
