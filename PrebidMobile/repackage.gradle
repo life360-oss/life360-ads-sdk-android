@@ -27,6 +27,9 @@ configurations {
 dependencies {
     // com.eed3si9n.jarjar bundles ASM 9.x and therefore supports Java 17 (class file v61) bytecode.
     // org.pantsbuild:jarjar 1.7.2 only ships ASM 5 (max Java 11) and silently skips every class.
+    // The fork also relocates Kotlin @Metadata annotations, which the original never rewrites —
+    // without that, Kotlin consumers would still resolve the pre-relocation org.prebid.mobile
+    // types from metadata and fail against the com.life360.ads bytecode.
     jarjarConfig 'com.eed3si9n.jarjar:jarjar-assembly:1.8.1'
 }
 
