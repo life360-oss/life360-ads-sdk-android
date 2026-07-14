@@ -4,9 +4,6 @@
 # Deploys the Life360 Ads Open Measurement SDK (com.life360:life360-ads-open-measurement-sdk)
 # to the Maven Central Portal. Call this only when the vendored omsdk-android module
 # has a new version (omSdkVersion in build.gradle).
-#
-# NOTE: deployPrebidMobile-life.sh already deploys omsdk as part of a full release.
-# Use this script only for a standalone OM SDK release.
 #################################
 
 # Merge Script
