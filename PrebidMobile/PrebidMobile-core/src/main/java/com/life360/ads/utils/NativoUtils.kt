@@ -43,8 +43,33 @@ object NativoUtils {
     }
     
     /**
+     * Runs [action] once [view] has a valid, up-to-date layout. This is necessary because
+     * neither attachment nor `View.post` guarantees a completed layout pass — attach happens
+     * synchronously in `addView`, and a plain post can execute before the pending layout frame,
+     * so sizes read there can be zero or stale. Equivalent to core-ktx `doOnLayout`, which
+     * this module doesn't depend on.
+     */
+    @JvmStatic
+    fun runOnLaidOut(view: View, action: (View) -> Unit) {
+        if (view.isLaidOut && !view.isLayoutRequested) {
+            action(view)
+        } else {
+            view.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
+                override fun onLayoutChange(
+                    v: View,
+                    left: Int, top: Int, right: Int, bottom: Int,
+                    oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int
+                ) {
+                    v.removeOnLayoutChangeListener(this)
+                    action(v)
+                }
+            })
+        }
+    }
+
+    /**
      * Captures a rasterized snapshot of the provided View and returns it as an ImageView.
-     * 
+     *
      * @param view The View to capture
      * @return ImageView containing the rasterized snapshot of the view
      */

@@ -17,6 +17,7 @@ import org.json.JSONObject
 import org.prebid.mobile.LogUtil
 import org.prebid.mobile.api.data.AdFormat
 import org.prebid.mobile.api.exceptions.AdException
+import org.prebid.mobile.api.rendering.BannerView
 import org.prebid.mobile.api.rendering.PrebidDisplayView
 import org.prebid.mobile.api.rendering.PrebidMobileInterstitialControllerInterface
 import org.prebid.mobile.api.rendering.pluginrenderer.PluginEventListener
@@ -41,8 +42,6 @@ class NativoRenderer : PrebidMobilePluginRenderer {
     override fun getVersion(): String = VERSION
 
     override fun getData(): JSONObject? = null
-
-    private var bannerViewContainer: View? = null
 
     override fun createBannerAdView(
         context: Context,
@@ -81,24 +80,7 @@ class NativoRenderer : PrebidMobilePluginRenderer {
             override fun onAdDisplayed() {
                 displayViewRef?.let { displayView ->
                     if (isNativoAd(bidResponse)) {
-
-                        val inBannerView = bannerViewContainer
-                        if (inBannerView == null) {
-                            LogUtil.error(TAG, "Nativo renderer expected a parent BannerView, but none was found.")
-                            return
-                        }
-
-                        // Ensure view is attached to window before rendering
-                        if (displayView.isAttachedToWindow) {
-                            renderNativoAd(displayView, inBannerView, bidResponse)
-                        } else {
-                            displayView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-                                override fun onViewAttachedToWindow(view: View) {
-                                    renderNativoAd(displayView, inBannerView, bidResponse)
-                                }
-                                override fun onViewDetachedFromWindow(v: View) {}
-                            })
-                        }
+                        renderNativoAd(displayView, bidResponse)
                     }
                     displayViewListener.onAdDisplayed()
                 }
@@ -158,7 +140,6 @@ class NativoRenderer : PrebidMobilePluginRenderer {
     override fun didInjectView(view: View, inBannerView: View, bidResponse: BidResponse) {
         // Set wrap content as the default layout. Will be overridden later if is a Nativo ad.
         view.layoutParams = FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER)
-        this.bannerViewContainer = inBannerView
     }
 
     // Private methods
@@ -181,9 +162,17 @@ class NativoRenderer : PrebidMobilePluginRenderer {
      * Expand the article full width, and attempt to expand height to parent container,
      * while also ensuring at least a minimum height of the requested bid.
      */
-    private fun renderNativoAd(displayView: PrebidDisplayView, inBannerView: View, bidResponse: BidResponse) {
-        val parentView = (inBannerView.parent as? View) ?: inBannerView
-        parentView.post {
+    private fun renderNativoAd(displayView: PrebidDisplayView, bidResponse: BidResponse) {
+        // Wait for attachment and layout before rendering
+        NativoUtils.runOnLaidOut(displayView) {
+            val inBannerView = generateSequence(displayView.parent) { it.parent }
+                .filterIsInstance<BannerView>()
+                .firstOrNull()
+            if (inBannerView == null) {
+                LogUtil.error(TAG, "Nativo renderer expected a parent BannerView, but none was found.")
+                return@runOnLaidOut
+            }
+            val parentView = (inBannerView.parent as? View) ?: inBannerView
             val minHeightPx = (bidResponse.winningBid?.height ?: 0).dpToPx()
             expandFullWidth(displayView, inBannerView)
             applyHeightStrategy(displayView, inBannerView, parentView, minHeightPx)

@@ -13,9 +13,9 @@
     <url>https://ads.life360.com</url>
 
     <scm>
-        <connection>scm:git:git@github.com:prebid/prebid-mobile-android.git</connection>
-        <developerConnection>scm:git:git@github.com:prebid/prebid-mobile-android.git</developerConnection>
-        <url>git@github.com:prebid/prebid-mobile-android.git</url>
+        <connection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</connection>
+        <developerConnection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</developerConnection>
+        <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
     </scm>
 
     <licenses>
