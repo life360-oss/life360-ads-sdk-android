@@ -32,7 +32,7 @@ dependencies {
     implementation project(':PrebidMobile')
 
     // For testing staging releases
-//    implementation "org.prebid:prebid-mobile-sdk:$prebidSdkVersionName"
+//    implementation "org.prebid:prebid-mobile-sdk:$sdkVersionName"
 
     // Base
     implementation libs.androidx.appcompat

@@ -35,7 +35,7 @@ dependencies {
     implementation project(':PrebidMobile-nextGenEventHandlers')
 
     // For testing SNAPSHOT releases
-    // implementation "org.prebid:prebid-mobile-sdk:$prebidSdkVersionName-SNAPSHOT"
+    // implementation "org.prebid:prebid-mobile-sdk:$sdkVersionName-SNAPSHOT"
 
     // Standard libraries
     implementation libs.kotlin.stdlib
