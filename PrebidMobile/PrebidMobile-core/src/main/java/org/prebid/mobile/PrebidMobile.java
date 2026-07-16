@@ -69,6 +69,11 @@ public class PrebidMobile {
     public static final String SDK_VERSION = BuildConfig.VERSION;
 
     /**
+     * Upstream Prebid Mobile release this fork was last synced with.
+     */
+    public static final String PREBID_VERSION = BuildConfig.PREBID_VERSION;
+
+    /**
      * SDK name provided for MRAID_ENV in {@link MraidEnv}
      */
     public static final String SDK_NAME = "life360-ads-sdk";
