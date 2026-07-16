@@ -37,10 +37,10 @@ dependencies {
    implementation project(':PrebidMobile-maxAdapters')
 
     // For testing SNAPSHOT releases
-    // implementation "org.prebid:prebid-mobile-sdk:$prebidSdkVersionName-SNAPSHOT"
-    // implementation "org.prebid:prebid-mobile-sdk-gam-event-handlers:$prebidSdkVersionName-SNAPSHOT"
-    // implementation "org.prebid:prebid-mobile-sdk-admob-adapters:$prebidSdkVersionName-SNAPSHOT"
-    // implementation "org.prebid:prebid-mobile-sdk-max-adapters:$prebidSdkVersionName-SNAPSHOT"
+    // implementation "org.prebid:prebid-mobile-sdk:$sdkVersionName-SNAPSHOT"
+    // implementation "org.prebid:prebid-mobile-sdk-gam-event-handlers:$sdkVersionName-SNAPSHOT"
+    // implementation "org.prebid:prebid-mobile-sdk-admob-adapters:$sdkVersionName-SNAPSHOT"
+    // implementation "org.prebid:prebid-mobile-sdk-max-adapters:$sdkVersionName-SNAPSHOT"
 
     // Standard libraries
     implementation libs.kotlin.stdlib

@@ -65,10 +65,10 @@ dependencies {
     implementation project(':PrebidMobile-maxAdapters')
 
     // For testing staging releases
-//    implementation "org.prebid:prebid-mobile-sdk:$prebidSdkVersionName"
-//    implementation "org.prebid:prebid-mobile-sdk-gam-event-handlers:$prebidSdkVersionName"
-//    implementation "org.prebid:prebid-mobile-sdk-admob-adapters:$prebidSdkVersionName"
-//    implementation "org.prebid:prebid-mobile-sdk-max-adapters:$prebidSdkVersionName"
+//    implementation "org.prebid:prebid-mobile-sdk:$sdkVersionName"
+//    implementation "org.prebid:prebid-mobile-sdk-gam-event-handlers:$sdkVersionName"
+//    implementation "org.prebid:prebid-mobile-sdk-admob-adapters:$sdkVersionName"
+//    implementation "org.prebid:prebid-mobile-sdk-max-adapters:$sdkVersionName"
 
     // Base dependencies
     implementation libs.kotlin.stdlib

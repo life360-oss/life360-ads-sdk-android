@@ -1,5 +1,6 @@
 ext {
-    prebidSdkVersionName = "1.1.1"
+    sdkVersionName = "1.1.2"
+    prebidVersion = "3.3.2"
     prebidSdkMinVersion = 19
     prebidSdkTargetVersion = 34
     prebidSdkCompileVersion = 34
