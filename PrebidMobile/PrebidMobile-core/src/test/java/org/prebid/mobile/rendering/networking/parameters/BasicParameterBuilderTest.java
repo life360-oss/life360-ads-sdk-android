@@ -33,6 +33,7 @@ import android.content.Context;
 import android.content.res.Configuration;
 
 import com.google.common.collect.Sets;
+import com.life360.ads.Life360Ads;
 
 import org.assertj.core.util.Lists;
 import org.json.JSONArray;
@@ -326,7 +327,7 @@ public class BasicParameterBuilderTest {
 
         JSONObject sourceExtJson = source.getJsonObject().getJSONObject("ext");
         assertEquals(OmAdSessionManager.PARTNER_NAME, sourceExtJson.getString("omidpn"));
-        assertEquals(PrebidMobile.SDK_VERSION, sourceExtJson.getString("omidpv"));
+        assertEquals(Life360Ads.version, sourceExtJson.getString("omidpv"));
     }
 
     @Test
@@ -1344,7 +1345,7 @@ public class BasicParameterBuilderTest {
         Imp imp = new Imp();
 
         imp.displaymanager = BasicParameterBuilder.DISPLAY_MANAGER_VALUE;
-        imp.displaymanagerver = PrebidMobile.SDK_VERSION;
+        imp.displaymanagerver = Life360Ads.version;
 
         if (!adConfiguration.isAdType(AdFormat.VAST)) {
             imp.secure = 1;

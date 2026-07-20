@@ -6,8 +6,9 @@ import android.os.Looper;
 import androidx.annotation.Nullable;
 
 import org.jetbrains.annotations.NotNull;
+import com.life360.ads.Life360Ads;
+
 import org.prebid.mobile.LogUtil;
-import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.InitializationStatus;
 import org.prebid.mobile.rendering.listeners.SdkInitializationListener;
 
@@ -34,7 +35,7 @@ public class InitializationNotifier {
         postOnMainThread(() -> {
             boolean statusRequestSuccessful = statusRequesterError == null;
             if (statusRequestSuccessful) {
-                LogUtil.debug(TAG, "Life360 Ads SDK " + PrebidMobile.SDK_VERSION + " initialized");
+                LogUtil.debug(TAG, "Life360 Ads SDK " + Life360Ads.version + " initialized");
 
                 if (listener != null) {
                     //allows placing of bids to occur in InitializationListener

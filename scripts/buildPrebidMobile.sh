@@ -51,9 +51,9 @@ LIBDIR=$BASEDIR
 
 echoX "$BASEDIR"
 
-# set the default release version to what's in the project's build.gradle file
+# set the default release version (the Life360 Ads SDK product version) to what's in build.gradle
 RELEASE_VERSION=""
-regex="prebidSdkVersionName.*=.*\"(.*)\""
+regex="sdkVersionName.*=.*\"(.*)\""
 while read -r line; do
   if [[ $line =~ $regex ]]; then
     RELEASE_VERSION=${BASH_REMATCH[1]}

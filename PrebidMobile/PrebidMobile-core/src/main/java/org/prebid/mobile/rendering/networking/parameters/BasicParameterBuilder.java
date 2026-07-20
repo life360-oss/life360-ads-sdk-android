@@ -16,7 +16,7 @@
 
 package org.prebid.mobile.rendering.networking.parameters;
 
-import static org.prebid.mobile.PrebidMobile.SDK_VERSION;
+import com.life360.ads.Life360Ads;
 
 import android.content.res.Resources;
 import android.text.TextUtils;
@@ -423,7 +423,9 @@ public class BasicParameterBuilder extends ParameterBuilder {
 
     private void setDisplayManager(Imp imp) {
         imp.displaymanager = adConfiguration.isOriginalAdUnit() ? null : DISPLAY_MANAGER_VALUE;
-        imp.displaymanagerver = adConfiguration.isOriginalAdUnit() ? null : SDK_VERSION;
+        // Outgoing bid-request version is deliberately the Life360 Ads SDK version, matching the
+        // displaymanager name above, so downstream partners attribute demand to us.
+        imp.displaymanagerver = adConfiguration.isOriginalAdUnit() ? null : Life360Ads.version;
     }
 
     private int[] getApiFrameworks() {

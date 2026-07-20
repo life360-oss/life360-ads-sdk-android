@@ -27,6 +27,8 @@ import androidx.test.uiautomator.BySelector;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.Until;
 
+import com.life360.ads.Life360Ads;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.prebid.mobile.PrebidMobile;
@@ -55,7 +57,7 @@ public class Mraid3TestProperties extends MraidBasicPage {
         JSONObject envJson = new JSONObject();
         envJson.put("version", PrebidMobile.MRAID_VERSION);
         envJson.put("sdk", PrebidMobile.SDK_NAME);
-        envJson.put("sdkVersion", PrebidMobile.SDK_VERSION);
+        envJson.put("sdkVersion", Life360Ads.version);
         envJson.put("appId", AppInfoManager.getPackageName());
         envJson.put("ifa", AdvertisingIdManager.getAdvertisingId(ManagersResolver.getInstance().getUserConsentManager()));
         envJson.put("limitAdTracking", AdvertisingIdManager.isLimitedAdTrackingEnabled());

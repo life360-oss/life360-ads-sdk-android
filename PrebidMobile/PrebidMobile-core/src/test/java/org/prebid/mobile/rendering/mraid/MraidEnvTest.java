@@ -16,6 +16,8 @@
 
 package org.prebid.mobile.rendering.mraid;
 
+import com.life360.ads.Life360Ads;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -31,7 +33,7 @@ public class MraidEnvTest {
         String expectedValue = "window.MRAID_ENV = {"
                 + "version: \"" + PrebidMobile.MRAID_VERSION + "\","
                 + "sdk: \"" + PrebidMobile.SDK_NAME + "\","
-                + "sdkVersion: \"" + PrebidMobile.SDK_VERSION + "\","
+                + "sdkVersion: \"" + Life360Ads.version + "\","
                 + "appId: \"null\","
                 + "ifa: \"null\","
                 + "limitAdTracking: false,"

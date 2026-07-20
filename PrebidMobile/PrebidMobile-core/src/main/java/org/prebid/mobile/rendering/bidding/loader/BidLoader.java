@@ -17,6 +17,7 @@
 package org.prebid.mobile.rendering.bidding.loader;
 
 import androidx.annotation.NonNull;
+import com.life360.ads.Life360Ads;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidEventDelegate;
 import org.prebid.mobile.PrebidMobile;
@@ -112,7 +113,7 @@ public class BidLoader {
 
         // In serverless mode there is no Prebid Server to load from; re-run the Nativo + event handler
         // path via the registered listener instead.
-        if (!PrebidMobile.isPrebidServerEnabled()) {
+        if (!Life360Ads.isPrebidServerEnabled()) {
             if (serverlessRefreshListener != null) {
                 LogUtil.debug(TAG, "refresh triggered: serverless reload being called ");
                 serverlessRefreshListener.onRefresh();

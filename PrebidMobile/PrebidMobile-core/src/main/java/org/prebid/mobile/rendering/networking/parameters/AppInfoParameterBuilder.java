@@ -18,6 +18,8 @@ package org.prebid.mobile.rendering.networking.parameters;
 
 import android.text.TextUtils;
 
+import com.life360.ads.Life360Ads;
+
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.TargetingParams;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
@@ -74,7 +76,9 @@ public class AppInfoParameterBuilder extends ParameterBuilder {
             app.domain = domain;
         }
 
-        app.getExt().put("prebid", Prebid.getJsonObjectForApp(BasicParameterBuilder.DISPLAY_MANAGER_VALUE, PrebidMobile.SDK_VERSION));
+        // Outgoing bid-request version is deliberately the Life360 Ads SDK version, not the Prebid
+        // version, so downstream partners attribute demand to us.
+        app.getExt().put("prebid", Prebid.getJsonObjectForApp(BasicParameterBuilder.DISPLAY_MANAGER_VALUE, Life360Ads.version));
         final Map<String, Set<String>> extDataDictionary = TargetingParams.getExtDataDictionary();
         if (!extDataDictionary.isEmpty()) {
             app.getExt().put("data", Utils.toJson(extDataDictionary));
