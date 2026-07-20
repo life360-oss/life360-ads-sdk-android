@@ -7,6 +7,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
+import com.life360.ads.Life360Ads;
 import com.life360.ads.renderer.NativoRenderer;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.LogUtil.PrebidLogger;
@@ -85,7 +86,7 @@ public class SdkInitializer {
     ) {
         try {
             Future<String> statusRequesterResult = null;
-            if (!PrebidMobile.shouldDisableStatusCheck() && PrebidMobile.isPrebidServerEnabled()) {
+            if (!PrebidMobile.shouldDisableStatusCheck() && Life360Ads.isPrebidServerEnabled()) {
                 statusRequesterResult = executor.submit(new StatusRequester());
             } else {
                 LogUtil.debug(TAG, "Prebid SDK initialization skipping status check");

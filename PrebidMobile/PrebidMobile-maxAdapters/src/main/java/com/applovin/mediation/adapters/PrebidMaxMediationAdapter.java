@@ -19,6 +19,8 @@ import com.applovin.mediation.adapters.prebid.managers.MaxNativeManager;
 import com.applovin.mediation.adapters.prebid.managers.MaxRewardedManager;
 import com.applovin.sdk.AppLovinSdk;
 
+import com.life360.ads.Life360Ads;
+
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.TargetingParams;
 
@@ -140,12 +142,12 @@ public class PrebidMaxMediationAdapter extends MediationAdapterBase implements M
 
     @Override
     public String getAdapterVersion() {
-        return PrebidMobile.SDK_VERSION;
+        return Life360Ads.version;
     }
 
     @Override
     public String getSdkVersion() {
-        return PrebidMobile.SDK_VERSION;
+        return Life360Ads.version;
     }
 
 

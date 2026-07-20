@@ -17,6 +17,7 @@
 package org.prebid.mobile.rendering.mraid;
 
 import androidx.annotation.NonNull;
+import com.life360.ads.Life360Ads;
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.rendering.sdk.ManagersResolver;
 import org.prebid.mobile.rendering.utils.helpers.AdvertisingIdManager;
@@ -33,7 +34,7 @@ public class MraidEnv {
         return "window.MRAID_ENV = {"
                 + getStringPropertyWithSeparator("version", PrebidMobile.MRAID_VERSION)
                 + getStringPropertyWithSeparator("sdk", PrebidMobile.SDK_NAME)
-                + getStringPropertyWithSeparator("sdkVersion", PrebidMobile.SDK_VERSION)
+                + getStringPropertyWithSeparator("sdkVersion", Life360Ads.version)
                 + getStringPropertyWithSeparator("appId", AppInfoManager.getPackageName())
                 + getStringPropertyWithSeparator("ifa", AdvertisingIdManager.getAdvertisingId(ManagersResolver.getInstance().getUserConsentManager()))
                 + getBooleanPropertyWithSeparator("limitAdTracking", AdvertisingIdManager.isLimitedAdTrackingEnabled(), ",")

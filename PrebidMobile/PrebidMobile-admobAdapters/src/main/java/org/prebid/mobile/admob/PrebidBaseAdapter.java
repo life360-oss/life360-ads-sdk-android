@@ -12,6 +12,8 @@ import com.google.android.gms.ads.mediation.MediationAdConfiguration;
 import com.google.android.gms.ads.mediation.MediationConfiguration;
 import com.google.android.gms.ads.VersionInfo;
 
+import com.life360.ads.Life360Ads;
+
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.ParametersMatcher;
 import org.prebid.mobile.PrebidMobile;
@@ -25,7 +27,7 @@ import java.util.List;
  */
 public abstract class PrebidBaseAdapter extends Adapter {
 
-    private final VersionInfo prebidVersion = getPrebidVersion();
+    private final VersionInfo sdkVersionInfo = parseSdkVersionInfo();
     protected static final String TAG = "PrebidAdapter";
 
     @Override
@@ -44,13 +46,13 @@ public abstract class PrebidBaseAdapter extends Adapter {
     @NonNull
     @Override
     public VersionInfo getVersionInfo() {
-        return prebidVersion;
+        return sdkVersionInfo;
     }
 
     @NonNull
     @Override
     public VersionInfo getSDKVersionInfo() {
-        return prebidVersion;
+        return sdkVersionInfo;
     }
 
     @Nullable
@@ -83,10 +85,11 @@ public abstract class PrebidBaseAdapter extends Adapter {
         return responseId;
     }
 
-    private VersionInfo getPrebidVersion() {
+    private VersionInfo parseSdkVersionInfo() {
         int[] versions = new int[]{0, 0, 0};
         try {
-            String[] versionStrings = PrebidMobile.SDK_VERSION.split("\\.");
+            // Report the wrapped Life360 Ads SDK product version to GMA, not the Prebid version.
+            String[] versionStrings = Life360Ads.version.split("\\.");
             if (versionStrings.length >= 3) {
                 for (int i = 0; i < 3; i++) {
                     versions[i] = Integer.parseInt(versionStrings[i]);
