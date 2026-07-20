@@ -22,6 +22,8 @@ import static android.os.Looper.getMainLooper;
 import android.app.Activity;
 import android.content.Context;
 
+import com.life360.ads.reflection.Life360AdsReflection;
+
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Before;
@@ -87,7 +89,7 @@ public class SdkInitializerTest {
         PrebidContextHolder.clearContext();
         Reflection.setStaticVariableTo(InitializationNotifier.class, "initializationInProgress", false);
         Reflection.setStaticVariableTo(PrebidMobile.class, "disableStatusCheck", false);
-        Reflection.setStaticVariableTo(PrebidMobile.class, "prebidServerEnabled", true);
+        Life360AdsReflection.setPrebidServerEnabled(true);
     }
 
 
@@ -296,7 +298,7 @@ public class SdkInitializerTest {
 
     @Test
     public void runBackgroundTasks_serverlessMode_statusCheckSkipped() throws InterruptedException {
-        Reflection.setStaticVariableTo(PrebidMobile.class, "prebidServerEnabled", false);
+        Life360AdsReflection.setPrebidServerEnabled(false);
 
         ExecutorService executorMock = mock(ExecutorService.class);
         SdkInitializer.runBackgroundTasks(mock(InitializationNotifier.class), executorMock);

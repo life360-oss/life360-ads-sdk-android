@@ -43,6 +43,7 @@ import org.prebid.mobile.rendering.bidding.listeners.BannerEventListener;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
+import com.life360.ads.reflection.Life360AdsReflection;
 import org.prebid.mobile.rendering.bidding.loader.BidLoader;
 import org.prebid.mobile.rendering.models.AdPosition;
 import org.prebid.mobile.rendering.utils.broadcast.ScreenStateReceiver;
@@ -99,7 +100,7 @@ public class BannerViewTest {
 
     @After
     public void tearDown() {
-        WhiteBox.setStaticVariableTo(PrebidMobile.class, "prebidServerEnabled", true);
+        Life360AdsReflection.setPrebidServerEnabled(true);
     }
 
     @Test
@@ -364,7 +365,7 @@ public class BannerViewTest {
     public void loadAdInServerlessMode_SkipBidLoaderRequestAdWithBidAndScheduleRefresh() {
         // Serverless mode: no Prebid Server. The (real) Nativo request fails synchronously because no
         // context is set, so loadAd() falls through to the serverless branch.
-        WhiteBox.setStaticVariableTo(PrebidMobile.class, "prebidServerEnabled", false);
+        Life360AdsReflection.setPrebidServerEnabled(false);
 
         bannerView.loadAd();
 

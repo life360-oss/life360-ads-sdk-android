@@ -42,6 +42,7 @@ import org.prebid.mobile.rendering.bidding.data.bid.Bid;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.bidding.interfaces.BannerEventHandler;
 import org.prebid.mobile.rendering.bidding.interfaces.StandaloneBannerEventHandler;
+import com.life360.ads.Life360Ads;
 import com.life360.ads.bid.NativoBidExt;
 import com.life360.ads.bid.NativoBidResponse;
 import com.life360.ads.bid.NativoAdType;
@@ -352,7 +353,7 @@ public class BannerView extends FrameLayout {
                 isPrimaryAdServerRequestInProgress = false;
                 // Start Nativo rendering
                 bannerEventListener.onSdkWin(bidResponse);
-            } else if (PrebidMobile.isPrebidServerEnabled()) {
+            } else if (Life360Ads.isPrebidServerEnabled()) {
                 // Start Prebid Server bid request
                 bidLoader.load();
             } else {

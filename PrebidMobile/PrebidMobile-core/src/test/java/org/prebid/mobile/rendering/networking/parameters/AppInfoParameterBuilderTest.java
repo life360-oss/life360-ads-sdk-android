@@ -19,6 +19,8 @@ package org.prebid.mobile.rendering.networking.parameters;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.life360.ads.Life360Ads;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.Before;
@@ -81,7 +83,7 @@ public class AppInfoParameterBuilderTest {
         expectedApp.getPublisher().id = PrebidMobile.getPrebidServerAccountId();
         expectedApp.getPublisher().name = expectedPublisherName;
         expectedApp.domain = expectedDomain;
-        expectedApp.getExt().put("prebid", Prebid.getJsonObjectForApp(BasicParameterBuilder.DISPLAY_MANAGER_VALUE, PrebidMobile.SDK_VERSION));
+        expectedApp.getExt().put("prebid", Prebid.getJsonObjectForApp(BasicParameterBuilder.DISPLAY_MANAGER_VALUE, Life360Ads.version));
 
         assertEquals(
                 expectedBidRequest.getJsonObject().toString(),

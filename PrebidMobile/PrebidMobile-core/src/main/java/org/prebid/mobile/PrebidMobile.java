@@ -64,9 +64,9 @@ public class PrebidMobile {
     public static final String SCHEME_HTTP = "http";
 
     /**
-     * SDK version
+     * Prebid SDK version.
      */
-    public static final String SDK_VERSION = BuildConfig.VERSION;
+    public static final String SDK_VERSION = BuildConfig.PREBID_VERSION;
 
     /**
      * Upstream Prebid Mobile release this fork was last synced with.
@@ -108,7 +108,6 @@ public class PrebidMobile {
 
     private static boolean pbsDebug = false;
     private static boolean shareGeoLocation = false;
-    private static boolean shareGeoLocationWithNativo = false;
     private static boolean assignNativeAssetID = false;
 
     /**
@@ -131,7 +130,6 @@ public class PrebidMobile {
     private static String customStatusEndpoint;
 
     private static Host host = Host.CUSTOM;
-    private static boolean prebidServerEnabled = true;
 
     private static final Map<String, String> storedBidResponses = new LinkedHashMap<>();
     private static HashMap<String, String> customHeaders = new HashMap<>();
@@ -223,20 +221,6 @@ public class PrebidMobile {
     }
 
     /**
-     * Allows the SDK to share geolocation on Nativo bid requests if permission is granted by the user.
-     */
-    public static void setShareGeoLocationWithNativo(boolean share) {
-        PrebidMobile.shareGeoLocationWithNativo = share;
-    }
-
-    /**
-     * {@link #setShareGeoLocationWithNativo(boolean)}
-     */
-    public static boolean isShareGeoLocationWithNativo() {
-        return shareGeoLocationWithNativo;
-    }
-
-    /**
      * HashMap containing a list of custom headers to add to requests
      */
     public static void setCustomHeaders(@Nullable HashMap<String, String> customHeaders) {
@@ -284,35 +268,8 @@ public class PrebidMobile {
             LogUtil.error(TAG, "initializeSdk: serverURL is null.");
             return;
         }
-        PrebidMobile.prebidServerEnabled = true;
         PrebidMobile.host = Host.createCustomHost(serverURL);
         SdkInitializer.init(context, listener);
-    }
-
-    /**
-     * Initializes the SDK without a Prebid Server, for integrations that only use Nativo demand plus
-     * their own ad-server event handler. Use this overload when you have no Prebid Server to point at:
-     * the BannerView flow then skips the Prebid Server bid request entirely and goes straight from the
-     * Nativo request to the EventHandler request. The PBS /status check is also skipped during init.
-     *
-     * @param context  any context (must be not null)
-     * @param listener initialization listener (can be null).
-     */
-    @MainThread
-    public static void initializeWithoutPrebid(
-            @Nullable Context context,
-            @Nullable SdkInitializationListener listener
-    ) {
-        PrebidMobile.prebidServerEnabled = false;
-        SdkInitializer.init(context, listener);
-    }
-
-    /**
-     * Whether the SDK was initialized with a Prebid Server. When false (see
-     * {@link #initializeWithoutPrebid(Context, SdkInitializationListener)}), Prebid Server bid requests are skipped.
-     */
-    public static boolean isPrebidServerEnabled() {
-        return prebidServerEnabled;
     }
 
     /**

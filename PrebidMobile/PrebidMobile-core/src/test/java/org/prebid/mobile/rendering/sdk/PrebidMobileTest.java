@@ -17,7 +17,6 @@
 package org.prebid.mobile.rendering.sdk;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -31,6 +30,8 @@ import static android.os.Looper.getMainLooper;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
+
+import com.life360.ads.Life360Ads;
 
 import org.junit.After;
 import org.junit.Before;
@@ -72,7 +73,6 @@ public class PrebidMobileTest {
 
         PrebidMobile.setStoredAuctionResponse(null);
         PrebidMobile.clearStoredBidResponses();
-        PrebidMobileReflection.setPrebidServerEnabled(true);
         PrebidMobileReflection.setDisableStatusCheck(false);
     }
 
@@ -117,23 +117,12 @@ public class PrebidMobileTest {
     }
 
     @Test
-    public void initializeWithoutPrebid_DisablesPrebidServer() {
-        PrebidMobileReflection.setPrebidServerEnabled(true);
-
-        // The flag is set before SdkInitializer.init runs; a null context makes init bail immediately
-        // (no lingering background threads) while still exercising the flag flip.
-        PrebidMobile.initializeWithoutPrebid(null, (SdkInitializationListener) null);
-
-        assertFalse(PrebidMobile.isPrebidServerEnabled());
-    }
-
-    @Test
-    public void initializeSdkWithServerUrl_EnablesPrebidServer() {
-        PrebidMobileReflection.setPrebidServerEnabled(false);
-
+    public void initializeSdkWithServerUrl_LeavesPrebidServerEnabled() {
+        // The Prebid Server is enabled by default and initializeSdk never toggles it explicitly;
+        // it must simply leave the default in place.
         PrebidMobile.initializeSdk(null, "https://prebid.example.com/openrtb2/auction", null);
 
-        assertTrue(PrebidMobile.isPrebidServerEnabled());
+        assertTrue(Life360Ads.isPrebidServerEnabled());
     }
 
     @Test

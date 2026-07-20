@@ -39,10 +39,6 @@ public class PrebidMobileReflection {
         Reflection.setStaticVariableTo(PrebidMobile.class, "disableStatusCheck", true);
     }
 
-    public static void setPrebidServerEnabled(boolean enabled) {
-        Reflection.setStaticVariableTo(PrebidMobile.class, "prebidServerEnabled", enabled);
-    }
-
     public static void setDisableStatusCheck(boolean disable) {
         Reflection.setStaticVariableTo(PrebidMobile.class, "disableStatusCheck", disable);
     }

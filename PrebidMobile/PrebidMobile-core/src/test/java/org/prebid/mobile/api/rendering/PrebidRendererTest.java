@@ -55,7 +55,7 @@ public class PrebidRendererTest {
 
     @Test
     public void getVersion_returnCurrentBuildConfigVersion() {
-        assertEquals(BuildConfig.VERSION, prebidRenderer.getVersion());
+        assertEquals(BuildConfig.PREBID_VERSION, prebidRenderer.getVersion());
     }
 
     @Test

@@ -24,6 +24,8 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.life360.ads.reflection.Life360AdsReflection;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.After;
@@ -78,12 +80,12 @@ public class BidLoaderTest {
 
     @After
     public void clean() {
-        PrebidMobileReflection.setPrebidServerEnabled(true);
+        Life360AdsReflection.setPrebidServerEnabled(true);
     }
 
     @Test
     public void whenRefreshTriggeredInServerlessMode_NotifyServerlessListenerAndSkipLoad() {
-        PrebidMobileReflection.setPrebidServerEnabled(false);
+        Life360AdsReflection.setPrebidServerEnabled(false);
 
         BidLoader serverlessLoader = new BidLoader(mockAdConfiguration, bidRequesterListener);
         WhiteBox.setInternalState(serverlessLoader, "bidRequester", mockRequester);
@@ -99,7 +101,7 @@ public class BidLoaderTest {
 
     @Test
     public void whenRefreshTriggeredWithPrebidServer_CallLoadNotServerlessListener() {
-        PrebidMobileReflection.setPrebidServerEnabled(true);
+        // Enabled by default; this test just needs the SDK marked initialized.
         PrebidMobileReflection.setFlagsThatSdkIsInitialized();
 
         BidLoader serverLoader = new BidLoader(mockAdConfiguration, bidRequesterListener);

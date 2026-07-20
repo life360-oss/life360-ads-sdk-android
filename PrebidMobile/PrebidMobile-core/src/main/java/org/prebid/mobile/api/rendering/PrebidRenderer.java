@@ -52,7 +52,7 @@ public class PrebidRenderer implements PrebidMobilePluginRenderer {
 
     @Override
     public String getVersion() {
-        return BuildConfig.VERSION;
+        return BuildConfig.PREBID_VERSION;
     }
 
     @Nullable
