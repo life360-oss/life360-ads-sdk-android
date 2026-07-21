@@ -1,0 +1,22 @@
+name: Fast-forward main on release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  fast-forward:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Fast-forward to release tag and push
+        run: |
+          git merge --ff-only ${{ github.event.release.tag_name }}
+          git push origin main
