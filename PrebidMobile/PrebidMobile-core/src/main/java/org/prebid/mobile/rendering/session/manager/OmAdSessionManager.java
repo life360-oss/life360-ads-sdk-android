@@ -378,6 +378,24 @@ public class OmAdSessionManager {
         }
     }
 
+    /**
+     * Removes a previously registered friendly obstruction, e.g. a transparent overlay that has
+     * scrolled off the ad or is no longer transparent.
+     */
+    public void removeObstruction(View view) {
+        if (adSession == null) {
+            LogUtil.error(TAG, "Failed to removeObstruction: adSession is null");
+            return;
+        }
+        if (view != null) {
+            try {
+                adSession.removeFriendlyObstruction(view);
+            } catch (IllegalArgumentException e) {
+                LogUtil.error(TAG, "Failed to removeObstruction. Reason: " + Log.getStackTraceString(e));
+            }
+        }
+    }
+
     private void trackAdUserInteractionEvent(InteractionType type) {
         if (mediaEvents == null) {
             LogUtil.error(TAG, "Failed to register adUserInteractionEvent with type: " + type);
