@@ -10,13 +10,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout main
+      - name: Checkout master
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: master
           fetch-depth: 0
 
       - name: Fast-forward to release tag and push
         run: |
           git merge --ff-only ${{ github.event.release.tag_name }}
-          git push origin main
+          git push origin master
