@@ -3,6 +3,11 @@ name: Fast-forward main on release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to fast-forward master to
+        required: true
 
 jobs:
   fast-forward:
@@ -18,5 +23,5 @@ jobs:
 
       - name: Fast-forward to release tag and push
         run: |
-          git merge --ff-only ${{ github.event.release.tag_name }}
+          git merge --ff-only ${{ github.event.inputs.tag || github.event.release.tag_name }}
           git push origin master
