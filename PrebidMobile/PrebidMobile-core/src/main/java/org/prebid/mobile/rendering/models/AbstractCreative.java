@@ -299,6 +299,20 @@ public abstract class AbstractCreative {
         omAdSessionManager.addObstruction(friendlyObstruction);
     }
 
+    public void removeOmFriendlyObstruction(View view) {
+        if (view == null) {
+            return;
+        }
+
+        OmAdSessionManager omAdSessionManager = weakOmAdSessionManager.get();
+        if (omAdSessionManager == null) {
+            LogUtil.error(TAG, "Unable to removeOmFriendlyObstruction. OmAdSessionManager is null");
+            return;
+        }
+
+        omAdSessionManager.removeObstruction(view);
+    }
+
     protected void startOmSession(OmAdSessionManager omAdSessionManager, View view) {
         omAdSessionManager.registerAdView(view);
         omAdSessionManager.startAdSession();

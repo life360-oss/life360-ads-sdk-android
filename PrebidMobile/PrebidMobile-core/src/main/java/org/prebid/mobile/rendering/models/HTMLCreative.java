@@ -19,10 +19,12 @@ package org.prebid.mobile.rendering.models;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.VisibleForTesting;
 
 import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.NativoFriendlyObstructionManager;
 
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.data.AdFormat;
@@ -32,6 +34,7 @@ import org.prebid.mobile.rendering.interstitial.InterstitialManagerDisplayDelega
 import org.prebid.mobile.rendering.interstitial.rewarded.RewardedExt;
 import org.prebid.mobile.rendering.listeners.CreativeViewListener;
 import org.prebid.mobile.rendering.listeners.WebViewDelegate;
+import org.prebid.mobile.rendering.models.internal.InternalFriendlyObstruction;
 import org.prebid.mobile.rendering.models.internal.MraidEvent;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
@@ -51,6 +54,8 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
     private MraidController mraidController;
 
     private PrebidWebViewBase twoPartNewWebViewBase;
+
+    private final NativoFriendlyObstructionManager friendlyObstructionManager = new NativoFriendlyObstructionManager();
 
     private boolean isEndCard = false;
     private boolean resolved;
@@ -168,6 +173,31 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
         startOmSession(omAdSessionManager, webView);
     }
 
+    /**
+     * Keeps OMID's friendly obstructions in sync with the transparent overlays currently on top of
+     * the ad. OMID counts every overlapping visible view as an occluder, even transparent ones that
+     * paint nothing over the ad; registering those as friendly obstructions stops them eroding
+     * reported viewability. Driven from {@link #onVisibilityEvent} rather than once at session start,
+     * because in a scrolling container the ad only slides under an overlay after the session begins.
+     */
+    private void reconcileTransparentObstructions() {
+        if (getCreativeView() == null) {
+            return;
+        }
+        NativoFriendlyObstructionManager.Reconciliation reconciliation =
+                friendlyObstructionManager.reconcile(getCreativeView().getWebView());
+        for (View view : reconciliation.getAdded()) {
+            addOmFriendlyObstruction(new InternalFriendlyObstruction(
+                    view,
+                    InternalFriendlyObstruction.Purpose.NOT_VISIBLE,
+                    "Transparent overlapping view"
+            ));
+        }
+        for (View view : reconciliation.getRemoved()) {
+            removeOmFriendlyObstruction(view);
+        }
+    }
+
     @Override
     public void trackAdLoaded() {
         CreativeModel creativeModel = getCreativeModel();
@@ -282,6 +312,9 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
             LogUtil.debug(TAG, "Impression fired");
             getCreativeModel().trackDisplayAdEvent(TrackingEvent.Events.IMPRESSION);
         }
+        // The visibility cycle fires on scroll/layout, so this is where we (re)detect transparent
+        // overlays now on top of the ad and reconcile OMID's friendly obstructions.
+        reconcileTransparentObstructions();
         getCreativeView().onWindowFocusChanged(isViewable);
         getCreativeView().onViewExposureChange(viewExposure);
     }
@@ -303,6 +336,8 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
 
     public void destroy() {
         super.destroy();
+
+        friendlyObstructionManager.clear();
 
         if (getCreativeView() != null) {
             getCreativeView().destroy();
