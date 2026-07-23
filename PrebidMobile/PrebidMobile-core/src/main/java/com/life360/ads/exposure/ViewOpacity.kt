@@ -10,7 +10,7 @@ import android.widget.TextView
 
 /**
  * Shared per-view heuristic for whether a view paints non-transparent content of its own — the common
- * judgment behind both OMID friendly-obstruction detection ([NativoFriendlyObstructionDetector]) and
+ * judgment behind both OMID friendly-obstruction detection ([NativoFriendlyObstructionManager]) and
  * exposure-based obstruction counting (`ViewExposureChecker`). Both callers walk the tree and recurse
  * into children themselves, so this answers only for the view in isolation, never its subtree.
  *

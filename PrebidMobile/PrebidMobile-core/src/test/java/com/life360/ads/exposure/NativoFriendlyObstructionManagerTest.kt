@@ -22,40 +22,35 @@ import org.robolectric.annotation.LooperMode
 import org.robolectric.annotation.LooperMode.Mode.LEGACY
 
 /**
- * Covers [NativoFriendlyObstructionDetector.friendlyObstructionViews], the transparent-overlay
- * detection that decides which on-top views OMID should treat as friendly obstructions. Getting it
- * wrong either lets transparent overlays erode reported viewability (under-reporting) or hides real
- * opaque occluders from OMID (over-reporting).
+ * Covers [NativoFriendlyObstructionManager]: the point-in-time detection ([friendlyObstructionViews])
+ * that decides which on-top views OMID should treat as friendly obstructions, and the stateful
+ * [reconcile] that emits only the delta as the ad scrolls under / out from overlays. Detection
+ * mistakes either erode viewability (transparent overlays counted) or hide real occluders; delta
+ * mistakes either re-register the same view every tick or leak stale registrations.
  *
- * Geometry note: every view is laid out via [layoutFull] only *after* the whole hierarchy is attached
- * — an `addView` (which calls `requestLayout`) after a manual `layout()` would re-expand earlier views
- * to `MATCH_PARENT`, clobbering their coordinates.
+ * Geometry note: views are laid out only *after* the whole hierarchy is attached — an `addView`
+ * (which calls `requestLayout`) after a manual `layout()` would re-expand earlier views to
+ * `MATCH_PARENT`, clobbering their coordinates.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [23], qualifiers = "w800dp-h800dp-xhdpi")
 @LooperMode(LEGACY)
-class NativoFriendlyObstructionDetectorTest {
+class NativoFriendlyObstructionManagerTest {
 
-    // The ad occupies the top-left 200x200; overlays overlap it at the same rect unless stated.
     private val adRect = intArrayOf(0, 0, 200, 200)
 
     private lateinit var activity: Activity
     private lateinit var container: FrameLayout
     private lateinit var ad: View
+    private val manager = NativoFriendlyObstructionManager()
 
     @Before
     fun setup() {
         activity = Robolectric.buildActivity(Activity::class.java)
-            .setup()
-            .create()
-            .visible()
-            .resume()
-            .windowFocusChanged(true)
-            .get()
+            .setup().create().visible().resume().windowFocusChanged(true).get()
         container = FrameLayout(activity).apply {
             layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
             )
         }
         activity.setContentView(container)
@@ -66,7 +61,7 @@ class NativoFriendlyObstructionDetectorTest {
     /** Lays out the ad at [adRect] plus each (view -> rect) pair — call last, after all `addView`s. */
     private fun layoutFull(vararg placements: Pair<View, IntArray>) {
         ad.layout(adRect[0], adRect[1], adRect[2], adRect[3])
-        placements.forEach { (view, r) -> view.layout(r[0], r[1], r[2], r[3]) }
+        placements.forEach { (view, r) -> if (view.parent != null) view.layout(r[0], r[1], r[2], r[3]) }
     }
 
     private fun rect(left: Int = 0, top: Int = 0, right: Int = 200, bottom: Int = 200) =
@@ -74,9 +69,9 @@ class NativoFriendlyObstructionDetectorTest {
 
     private fun opaqueBackground() = ColorDrawable(Color.RED)
 
-    private fun detect() = NativoFriendlyObstructionDetector().friendlyObstructionViews(ad)
+    private fun detect() = manager.friendlyObstructionViews(ad)
 
-    // --- Registered ------------------------------------------------------------------------------
+    // region Detection
 
     @Test
     fun overlappingTransparentSibling_isRegistered() {
@@ -97,7 +92,6 @@ class NativoFriendlyObstructionDetectorTest {
         container.addView(overlay)
         layoutFull(overlay to rect(), childA to rect(), childB to rect())
 
-        // The whole subtree is transparent, so only the container is the maximal root.
         assertEquals(listOf<View>(overlay), detect())
     }
 
@@ -106,12 +100,11 @@ class NativoFriendlyObstructionDetectorTest {
         val overlay = FrameLayout(activity)
         val opaque = View(activity).apply { background = opaqueBackground() }
         val transparent = View(activity)
-        overlay.addView(opaque)      // occluding
-        overlay.addView(transparent) // transparent, drawn on top
+        overlay.addView(opaque)
+        overlay.addView(transparent)
         container.addView(overlay)
         layoutFull(overlay to rect(), opaque to rect(), transparent to rect())
 
-        // Part of the subtree occludes, so the container is not a root; only the transparent child is.
         val result = detect()
         assertEquals(listOf(transparent), result)
         assertFalse(result.contains(overlay))
@@ -120,22 +113,17 @@ class NativoFriendlyObstructionDetectorTest {
 
     @Test
     fun transparentContainerWithOpaqueChildOutsideAdFrame_isRegistered() {
-        // The container spans past the ad and its only opaque child sits entirely outside the ad's
-        // frame, so it never occluded the ad — registering the whole container hides nothing OMID
-        // measures.
         val overlay = FrameLayout(activity)
         val opaqueOutside = View(activity).apply { background = opaqueBackground() }
         overlay.addView(opaqueOutside)
         container.addView(overlay)
         layoutFull(
-            overlay to rect(0, 0, 600, 600),          // covers the ad's 0..200 region and beyond
-            opaqueOutside to rect(400, 400, 600, 600) // off the ad entirely
+            overlay to rect(0, 0, 600, 600),
+            opaqueOutside to rect(400, 400, 600, 600)
         )
 
         assertEquals(listOf<View>(overlay), detect())
     }
-
-    // --- Not registered (opaque content) ---------------------------------------------------------
 
     @Test
     fun overlappingOpaqueBackgroundSibling_notRegistered() {
@@ -187,8 +175,6 @@ class NativoFriendlyObstructionDetectorTest {
         assertTrue(detect().isEmpty())
     }
 
-    // --- Not registered (hidden / transparent-alpha / non-overlapping) ---------------------------
-
     @Test
     fun goneSibling_notRegistered() {
         val overlay = View(activity).apply { visibility = View.GONE }
@@ -225,11 +211,8 @@ class NativoFriendlyObstructionDetectorTest {
         assertTrue(detect().isEmpty())
     }
 
-    // --- Earlier siblings (drawn under the ad) are never candidates ------------------------------
-
     @Test
     fun transparentSiblingDrawnUnderAd_notRegistered() {
-        // Insert a transparent view *before* the ad in z-order; it sits under the ad, not on top.
         val under = View(activity)
         container.addView(under, 0)
         layoutFull(under to rect())
@@ -237,17 +220,92 @@ class NativoFriendlyObstructionDetectorTest {
         assertTrue(detect().isEmpty())
     }
 
-    // --- Guards -----------------------------------------------------------------------------------
-
     @Test
     fun nullAdView_returnsEmpty() {
-        assertTrue(NativoFriendlyObstructionDetector().friendlyObstructionViews(null).isEmpty())
+        assertTrue(manager.friendlyObstructionViews(null).isEmpty())
     }
 
     @Test
     fun detachedAdView_returnsEmpty() {
-        assertTrue(
-            NativoFriendlyObstructionDetector().friendlyObstructionViews(View(activity)).isEmpty()
-        )
+        assertTrue(manager.friendlyObstructionViews(View(activity)).isEmpty())
     }
+
+    // endregion
+
+    // region Reconcile (delta tracking)
+
+    @Test
+    fun reconcile_overlappingTransparentOverlay_addsOnce_thenNoDelta() {
+        val overlay = View(activity)
+        container.addView(overlay)
+        layoutFull(overlay to rect())
+
+        val first = manager.reconcile(ad)
+        assertEquals(listOf(overlay), first.added)
+        assertTrue(first.removed.isEmpty())
+
+        val second = manager.reconcile(ad) // nothing changed
+        assertTrue(second.added.isEmpty())
+        assertTrue(second.removed.isEmpty())
+    }
+
+    @Test
+    fun reconcile_overlayScrollsOffAd_isRemoved() {
+        val overlay = View(activity)
+        container.addView(overlay)
+        layoutFull(overlay to rect())
+        manager.reconcile(ad)
+
+        overlay.layout(400, 400, 600, 600) // no longer overlaps the ad
+        val result = manager.reconcile(ad)
+
+        assertTrue(result.added.isEmpty())
+        assertEquals(listOf(overlay), result.removed)
+    }
+
+    @Test
+    fun reconcile_overlayBecomesOpaque_isRemoved() {
+        val overlay = View(activity)
+        container.addView(overlay)
+        layoutFull(overlay to rect())
+        manager.reconcile(ad)
+
+        overlay.setBackgroundColor(Color.BLACK) // now paints over the ad
+        val result = manager.reconcile(ad)
+
+        assertTrue(result.added.isEmpty())
+        assertEquals(listOf(overlay), result.removed)
+    }
+
+    @Test
+    fun reconcile_overlayDetached_isRemoved() {
+        val overlay = View(activity)
+        container.addView(overlay)
+        layoutFull(overlay to rect())
+        manager.reconcile(ad)
+
+        container.removeView(overlay)
+        val result = manager.reconcile(ad)
+
+        assertTrue(result.added.isEmpty())
+        assertEquals(listOf(overlay), result.removed)
+    }
+
+    @Test
+    fun reconcile_afterClear_forgetsTracking_soDisappearanceEmitsNoRemove() {
+        val overlay = View(activity)
+        container.addView(overlay)
+        layoutFull(overlay to rect())
+        manager.reconcile(ad)
+
+        manager.clear() // e.g. OM session ended
+
+        overlay.layout(400, 400, 600, 600)
+        val result = manager.reconcile(ad)
+
+        assertTrue(result.added.isEmpty())
+        assertTrue(result.removed.isEmpty())
+    }
+
+    // endregion
 }

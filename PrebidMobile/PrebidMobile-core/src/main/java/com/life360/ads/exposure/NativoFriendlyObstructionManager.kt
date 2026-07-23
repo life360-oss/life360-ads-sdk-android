@@ -5,23 +5,61 @@ import android.view.View
 import android.view.ViewGroup
 
 /**
+ * Detects the transparent overlays on top of an ad and tracks which are registered as OMID friendly
+ * obstructions, so callers apply only the changes as the ad scrolls under / out from overlays.
+ *
  * OMID auto-detects occluders by walking the view tree and counts every overlapping, non-hidden,
- * alpha>0 view as an occluder — even when that view paints nothing over the ad (transparent
- * background, or opaque content that falls outside the ad's frame). That erodes the measured viewable
- * area for Nativo/HTML ads sitting under transparent overlays or gesture-only views.
+ * alpha>0 view as an occluder — even one whose entire subtree paints nothing over the ad (transparent
+ * background, or opaque content outside the ad's frame). That erodes measured viewability for
+ * Nativo/HTML ads sitting under transparent overlays or gesture-only views; registering those overlays
+ * as friendly obstructions (`FriendlyObstructionPurpose.NOT_VISIBLE`) stops OMID counting them.
  *
- * This finds the on-top views that paint nothing over the ad's frame so callers can register them as
- * OMID friendly obstructions (`FriendlyObstructionPurpose.NOT_VISIBLE`), which stops OMID descending
- * into (and counting) those overlays.
- *
- * OMID only measures within the ad's frame and stops descending at a registered obstruction, so we
- * register the *maximal* qualifying view: register a container whenever nothing in its subtree paints
- * over the ad's frame — an opaque child is fine as long as it falls outside that frame, since it never
- * occluded the ad. Only when opaque content actually overlaps the ad do we skip the container and
- * descend to register the transparent sub-regions instead (registering the container there would also
- * hide the real occluder).
+ * [friendlyObstructionViews] is a point-in-time snapshot. Because the OM session starts while the ad
+ * may still be off-screen in a scrolling container, [reconcile] must be re-run from the viewability
+ * cycle; it diffs the fresh snapshot against what is already registered and returns only the delta.
  */
-class NativoFriendlyObstructionDetector {
+class NativoFriendlyObstructionManager {
+
+    /** The change in registered obstructions since the previous [reconcile]. */
+    data class Reconciliation(val added: List<View>, val removed: List<View>)
+
+    private val registered = mutableSetOf<View>()
+
+    // region Reconciliation (stateful)
+
+    /**
+     * Re-detects the transparent overlays over [adView] and returns only the changes since the last
+     * call — newly-qualifying views to register, and no-longer-qualifying ones (scrolled away,
+     * detached, or turned opaque) to unregister. Callers apply the delta to the OM session.
+     */
+    fun reconcile(adView: View?): Reconciliation {
+        val current = friendlyObstructionViews(adView).toSet()
+
+        val added = current.filter { registered.add(it) }
+
+        val removed = mutableListOf<View>()
+        val iterator = registered.iterator()
+        while (iterator.hasNext()) {
+            val view = iterator.next()
+            if (view !in current) {
+                iterator.remove()
+                removed.add(view)
+            }
+        }
+        return Reconciliation(added, removed)
+    }
+
+    /**
+     * Forgets all tracked obstructions without emitting a delta — for when the OM session ends and its
+     * obstructions are torn down with it.
+     */
+    fun clear() {
+        registered.clear()
+    }
+
+    // endregion
+
+    // region Detection (stateless snapshot)
 
     /**
      * Walks the views drawn on top of [adView] — the later siblings up the ancestor chain, the same
@@ -32,7 +70,6 @@ class NativoFriendlyObstructionDetector {
         val result = mutableListOf<View>()
         if (adView == null) return result
 
-        // OMID measures within the ad's own bounds, so only content overlapping this rect matters.
         val adRect = screenRect(adView)
         if (adRect.isEmpty) return result
 
@@ -96,6 +133,8 @@ class NativoFriendlyObstructionDetector {
         view.getLocationOnScreen(location)
         return Rect(location[0], location[1], location[0] + view.width, location[1] + view.height)
     }
+
+    // endregion
 
     private companion object {
         // Treat near-zero alpha as fully transparent.
