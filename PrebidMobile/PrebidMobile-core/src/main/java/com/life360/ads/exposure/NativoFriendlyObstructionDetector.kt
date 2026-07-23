@@ -3,9 +3,6 @@ package com.life360.ads.exposure
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebView
-import android.widget.ImageView
-import android.widget.TextView
 
 /**
  * OMID auto-detects occluders by walking the view tree and counts every overlapping, non-hidden,
@@ -76,7 +73,7 @@ class NativoFriendlyObstructionDetector {
     /** True if [view] or any descendant paints non-transparent content intersecting the ad. */
     private fun subtreePaintsOpaqueOverAd(view: View, adRect: Rect): Boolean {
         if (isEffectivelyHidden(view)) return false
-        if (viewPaintsOpaqueContent(view) && overlapsAd(view, adRect)) return true
+        if (ViewOpacity.paintsOpaqueContent(view) && overlapsAd(view, adRect)) return true
         if (view is ViewGroup) {
             for (i in 0 until view.childCount) {
                 if (subtreePaintsOpaqueOverAd(view.getChildAt(i), adRect)) return true
@@ -92,21 +89,6 @@ class NativoFriendlyObstructionDetector {
 
     private fun overlapsAd(view: View, adRect: Rect): Boolean {
         return Rect.intersects(screenRect(view), adRect)
-    }
-
-    /**
-     * Heuristic for whether [view] itself paints non-transparent content. Deliberately conservative:
-     * unrecognized leaf types default to transparent, so only known painters count as occluders.
-     */
-    private fun viewPaintsOpaqueContent(view: View): Boolean {
-        // Drawable.getAlpha() is available since API 19 (the module's minSdk).
-        view.background?.let { if (it.alpha != 0) return true }
-        return when (view) {
-            is ImageView -> view.drawable != null
-            is TextView -> !view.text.isNullOrEmpty() && (view.currentTextColor ushr 24) != 0
-            is WebView -> true
-            else -> false
-        }
     }
 
     private fun screenRect(view: View): Rect {

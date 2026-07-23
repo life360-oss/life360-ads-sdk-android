@@ -17,7 +17,6 @@
 package org.prebid.mobile.rendering.utils.exposure;
 
 import android.graphics.Rect;
-import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +24,7 @@ import android.widget.ImageView;
 import androidx.annotation.VisibleForTesting;
 import org.prebid.mobile.LogUtil;
 import com.life360.ads.core.R;
+import com.life360.ads.exposure.ViewOpacity;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -365,27 +365,12 @@ public class ViewExposureChecker {
     }
 
     /**
-     * @return true if child is not instance of ViewGroup or if child is ViewGroup and foreground and background is transparent (or null).
+     * @return true if the view paints non-transparent content of its own — see
+     * {@link ViewOpacity#paintsOpaqueContent(View)}. A view group's children are handled separately by
+     * {@link #collectObstructionsFrom(View)} recursion, so this reflects only the view in isolation.
      */
     @VisibleForTesting
     boolean shouldCollectObstruction(View child) {
-        if (!(child instanceof ViewGroup)) {
-            return true;
-        }
-
-        final Drawable foreground = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                                    ? child.getForeground()
-                                    : null;
-        final Drawable background = child.getBackground();
-
-        boolean isForegroundTransparent = true;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-            isForegroundTransparent = foreground == null || foreground.getAlpha() == 0;
-        }
-
-        final boolean isBackgroundTransparent = Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
-                                                && (background == null || background.getAlpha() == 0);
-
-        return !isBackgroundTransparent || !isForegroundTransparent;
+        return ViewOpacity.paintsOpaqueContent(child);
     }
 }

@@ -168,6 +168,11 @@ public class ViewExposureCheckerTest {
         parent.setBackground(background);
         grandParent.setBackground(background);
         root.setBackground(background);
+        // Bare Views paint nothing; give the occluders opaque content so they register as such.
+        // (In the last table `view` becomes an occluder of `obstruction`; a background is a no-op
+        // while `view` is the measured subject in the earlier tables.)
+        obstruction.setBackground(background);
+        view.setBackground(background);
 
         container.addView(root);
         root.addView(grandParent);
@@ -302,6 +307,11 @@ public class ViewExposureCheckerTest {
         when(background.getAlpha()).thenReturn(255);
         parent.setBackground(background);
         aunt.setBackground(background);
+        // Bare Views paint nothing; give the occluders opaque content so they register as obstructions.
+        brother.setBackground(background);
+        xBtn.setBackground(background);
+        uncle.setBackground(background);
+        cousin.setBackground(background);
 
         container.setClipChildren(false);
         parent.setClipChildren(false);
@@ -395,8 +405,17 @@ public class ViewExposureCheckerTest {
     }
 
     @Test
-    public void whenShouldCollectObstructionWithNonViewGroup_ReturnTrue() {
+    public void whenShouldCollectObstructionWithPlainView_ReturnFalse() {
+        // A plain android.view.View draws nothing on its own, so it does not obstruct.
         View child = new View(activity);
+        assertFalse(viewExposureChecker.shouldCollectObstruction(child));
+    }
+
+    @Test
+    public void whenShouldCollectObstructionWithCustomViewSubclass_ReturnTrue() {
+        // A custom subclass may override onDraw, so it is conservatively treated as opaque.
+        View child = new View(activity) {
+        };
         assertTrue(viewExposureChecker.shouldCollectObstruction(child));
     }
 
