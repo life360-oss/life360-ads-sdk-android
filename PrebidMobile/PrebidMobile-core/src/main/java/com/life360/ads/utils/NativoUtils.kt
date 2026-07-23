@@ -61,7 +61,7 @@ object NativoUtils {
                     oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int
                 ) {
                     v.removeOnLayoutChangeListener(this)
-                    action(v)
+                    v.post { action(v) }
                 }
             })
         }
