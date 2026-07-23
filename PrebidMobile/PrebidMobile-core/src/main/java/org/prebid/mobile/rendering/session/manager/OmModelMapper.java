@@ -48,6 +48,8 @@ class OmModelMapper {
                 return FriendlyObstructionPurpose.CLOSE_AD;
             case VIDEO_CONTROLS:
                 return FriendlyObstructionPurpose.VIDEO_CONTROLS;
+            case NOT_VISIBLE:
+                return FriendlyObstructionPurpose.NOT_VISIBLE;
             case OTHER:
                 return FriendlyObstructionPurpose.OTHER;
             default:
