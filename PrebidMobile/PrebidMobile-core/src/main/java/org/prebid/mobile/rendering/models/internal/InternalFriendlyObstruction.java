@@ -51,6 +51,7 @@ public class InternalFriendlyObstruction {
     public enum Purpose {
         CLOSE_AD,
         OTHER,
-        VIDEO_CONTROLS
+        VIDEO_CONTROLS,
+        NOT_VISIBLE
     }
 }
