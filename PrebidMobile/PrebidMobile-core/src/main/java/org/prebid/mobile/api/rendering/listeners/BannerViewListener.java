@@ -32,18 +32,6 @@ public interface BannerViewListener {
     void onAdLoaded(BannerView bannerView);
 
     /**
-     * Optional method that is be called when an ad is served
-     * and renderer by Nativo. The Nativo renderer attempts to
-     * break out of its fixed ad size and serve into the full size
-     * of its container.
-     *
-     * @param bannerView view of the corresponding event.
-     */
-    default void onNativoAdLoaded(BannerView bannerView) {
-        // Optional callback - default empty implementation
-    }
-
-    /**
      * Executed when the ad is displayed on screen.
      *
      * @param bannerView view of the corresponding event.

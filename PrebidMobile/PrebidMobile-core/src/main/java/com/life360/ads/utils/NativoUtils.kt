@@ -5,8 +5,6 @@ import android.graphics.Canvas
 import android.os.SystemClock
 import android.view.View
 import android.widget.ImageView
-import org.prebid.mobile.api.rendering.BannerView
-import org.prebid.mobile.api.rendering.listeners.BannerViewListener
 import java.util.concurrent.atomic.AtomicLong
 
 object NativoUtils {
@@ -22,26 +20,6 @@ object NativoUtils {
         }
     }
 
-    /**
-     * Checks if the listener has implemented the onNativoAdLoaded method
-     * by checking if it's overridden from the default interface implementation.
-     */
-    @JvmStatic
-    fun hasImplementedNativoCallback(listener: BannerViewListener?): Boolean {
-        if (listener == null) {
-            return false
-        }
-
-        return try {
-            val method = listener.javaClass.getMethod("onNativoAdLoaded", BannerView::class.java)
-            // Check if the method is declared in the listener's own class (not just inherited from interface)
-            // This means they've overridden it from the default implementation
-            method.declaringClass != BannerViewListener::class.java
-        } catch (e: NoSuchMethodException) {
-            false
-        }
-    }
-    
     /**
      * Runs [action] once [view] has a valid, up-to-date layout. This is necessary because
      * neither attachment nor `View.post` guarantees a completed layout pass — attach happens
