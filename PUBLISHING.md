@@ -40,9 +40,28 @@ promotes the deployment to `VALIDATED` for manual publish.
 - [ ] **Confirm namespace ownership** — the `com.life360` namespace is verified for your
       Central Portal account.
 
-## Per-release checklist
+## Cutting a release (recommended: automated)
 
-- [ ] Bump `prebidSdkVersionName` in `build.gradle` (and `omSdkVersion` if the vendored OM SDK changed).
+The **Cut release** workflow (`.github/workflows/cut_release.yml`) removes the manual
+version-bump step — no force-push to `develop`, no version-only PR:
+
+1. Actions → **Cut release (bump version + tag)** → **Run workflow** on `develop`.
+2. Pick a `bump` (patch / minor / major), or type an exact `version` to override.
+3. It bumps `sdkVersionName` in `build.gradle`, commits it to `develop` as an ordinary
+   commit, and pushes a `v<version>` tag. It **stops at the tag** on purpose.
+4. When you're ready to ship, publish the GitHub Release for that tag (the run's summary
+   links straight to the pre-filled release form). Publishing the release triggers
+   `deploy_maven.yml` (which re-verifies the tag matches `build.gradle`) and
+   `sync_master.yml` (fast-forwards `master`).
+5. The Central upload lands as `VALIDATED`; finish with the manual **Publish** click in the
+   portal (see below).
+
+> Bump `omSdkVersion` separately (a normal commit/PR) if the vendored OM SDK changed — the
+> Cut release workflow only touches `sdkVersionName`.
+
+## Per-release checklist (manual fallback)
+
+- [ ] Bump `sdkVersionName` in `build.gradle` (and `omSdkVersion` if the vendored OM SDK changed).
 - [ ] Commit the version bump and the current uncommitted fixes.
 - [ ] Export the GPG key id: `export GPG_KEYNAME=<your-key-id>`.
 - [ ] From `scripts/Maven/`, run the deploy (you'll be prompted for the GPG passphrase):

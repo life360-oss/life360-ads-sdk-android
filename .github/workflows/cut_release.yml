@@ -1,0 +1,117 @@
+name: Cut release (bump version + tag)
+
+# Bumps sdkVersionName in build.gradle on develop, commits it as a
+# fast-forward commit, and pushes a matching v<version>
+# tag. Stops there: publishing the GitHub Release from that tag is a manual step
+# that then fans out into deploy_maven.yml (Maven Central) and sync_master.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver part to bump (ignored if "version" is set)
+        type: choice
+        default: patch
+        options: [patch, minor, major]
+      version:
+        description: Exact version override, e.g. 1.3.0 (leave blank to use bump)
+        required: false
+        type: string
+
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  cut-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Compute next version
+        id: ver
+        run: |
+          set -euo pipefail
+          CURRENT=$(grep -E 'sdkVersionName' build.gradle | sed -E 's/.*"(.*)".*/\1/')
+          echo "Current sdkVersionName: $CURRENT"
+
+          OVERRIDE="${{ inputs.version }}"
+          if [ -n "$OVERRIDE" ]; then
+            NEW="${OVERRIDE#v}"
+          else
+            if ! [[ "$CURRENT" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Current version '$CURRENT' is not plain x.y.z; pass an explicit 'version' input to bump it."
+              exit 1
+            fi
+            IFS='.' read -r MA MI PA <<< "$CURRENT"
+            case "${{ inputs.bump }}" in
+              major) MA=$((MA + 1)); MI=0; PA=0 ;;
+              minor) MI=$((MI + 1)); PA=0 ;;
+              patch) PA=$((PA + 1)) ;;
+            esac
+            NEW="$MA.$MI.$PA"
+          fi
+
+          if ! [[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Computed version '$NEW' is not a valid semver."
+            exit 1
+          fi
+          if [ "$NEW" = "$CURRENT" ]; then
+            echo "::error::New version '$NEW' equals current version; nothing to release."
+            exit 1
+          fi
+          # Guard against accidental downgrade (sort -V puts the greater version last).
+          GREATER=$(printf '%s\n%s\n' "$CURRENT" "$NEW" | sort -V | tail -n1)
+          if [ "$GREATER" != "$NEW" ]; then
+            echo "::error::New version '$NEW' is older than current '$CURRENT'."
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$NEW" >/dev/null; then
+            echo "::error::Tag v$NEW already exists."
+            exit 1
+          fi
+
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "Next version: $NEW"
+
+      - name: Bump build.gradle
+        run: |
+          set -euo pipefail
+          NEW="${{ steps.ver.outputs.new }}"
+          sed -i -E "s/(sdkVersionName = \")[^\"]*(\")/\1${NEW}\2/" build.gradle
+          # Fail loudly if the substitution did not take.
+          grep -qE "sdkVersionName = \"${NEW}\"" build.gradle
+
+      - name: Commit, tag, and push
+        run: |
+          set -euo pipefail
+          NEW="${{ steps.ver.outputs.new }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build.gradle
+          git commit -m "Release v${NEW}"
+          git tag -a "v${NEW}" -m "Release v${NEW}"
+          git push origin develop
+          git push origin "v${NEW}"
+
+      - name: Summary
+        run: |
+          NEW="${{ steps.ver.outputs.new }}"
+          REPO="${{ github.server_url }}/${{ github.repository }}"
+          {
+            echo "### Release cut: v${NEW}"
+            echo ""
+            echo "- Bumped \`sdkVersionName\` ${{ steps.ver.outputs.current }} → **${NEW}** on \`develop\`"
+            echo "- Pushed tag \`v${NEW}\`"
+            echo ""
+            echo "**Next step (manual):** publish the GitHub Release for \`v${NEW}\` to trigger the Maven deploy + master fast-forward:"
+            echo ""
+            echo "[Create the release →](${REPO}/releases/new?tag=v${NEW})"
+          } >> "$GITHUB_STEP_SUMMARY"
