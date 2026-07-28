@@ -4,15 +4,29 @@
 // This script is applied by android.gradle to every library module.
 // It adds one task, repackageReleaseAar, that:
 //   1. Unzips the assembled release AAR.
-//   2. Runs JarJar on classes.jar to relocate bytecode + Kotlin metadata.
-//   3. Rewrites the plain-text AndroidManifest.xml (activity class names, etc.).
-//   4. Rewrites consumer ProGuard rules (proguard.txt).
-//   5. Rezips everything as <module>-release-repackaged.aar.
+//   2. Runs JarJar on classes.jar to relocate bytecode.
+//   3. Rewrites Kotlin @Metadata (JarJar does not touch it — see step 2b).
+//   4. Rewrites the plain-text AndroidManifest.xml (activity class names, etc.).
+//   5. Rewrites consumer ProGuard rules (proguard.txt).
+//   6. Rezips everything as <module>-release-repackaged.aar.
 //
 // buildPrebidMobile.sh calls this task instead of assembleRelease and then
 // copies the -repackaged.aar in place of the original, so the rest of the
 // deploy pipeline is unchanged.
 // ---------------------------------------------------------------------------
+
+import org.objectweb.asm.AnnotationVisitor
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+
+// ASM is used by the Kotlin @Metadata relocation step (step 2b). It is on the
+// script classpath only — it never leaks into the module's compile/runtime.
+buildscript {
+    repositories { mavenCentral() }
+    dependencies { classpath 'org.ow2.asm:asm:9.7' }
+}
 
 // Locate the SDK's PrebidMobile/ directory using the same convention as android.gradle:
 // if repackage.gradle exists in this module's projectDir we are the top-level PrebidMobile
@@ -27,10 +41,77 @@ configurations {
 dependencies {
     // com.eed3si9n.jarjar bundles ASM 9.x and therefore supports Java 17 (class file v61) bytecode.
     // org.pantsbuild:jarjar 1.7.2 only ships ASM 5 (max Java 11) and silently skips every class.
-    // The fork also relocates Kotlin @Metadata annotations, which the original never rewrites —
-    // without that, Kotlin consumers would still resolve the pre-relocation org.prebid.mobile
-    // types from metadata and fail against the com.life360.ads bytecode.
+    // NOTE: this fork is a Scala tool — it relocates JVM bytecode (and Scala's ScalaSignature) but
+    // does NOT rewrite Kotlin @Metadata. Step 2b below handles Kotlin metadata; without it Kotlin
+    // consumers resolve the pre-relocation org.prebid.mobile types from metadata and fail against
+    // the com.life360.ads bytecode with NoSuchMethodError.
     jarjarConfig 'com.eed3si9n.jarjar:jarjar-assembly:1.8.1'
+}
+
+/**
+ * Relocate org.prebid.mobile.** → com.life360.ads.** inside a class's Kotlin @Metadata.
+ *
+ * Every type name in @Metadata lives in its `d2` string array and is referenced by index from the
+ * `d1` protobuf, so relocating the `d2` strings (preserving array order) relocates every type
+ * reference without re-encoding `d1`. ASM handles the constant-pool/length bookkeeping.
+ *
+ * Alternatives considered, and why this wins for a pure prefix rename:
+ *   • kotlin-metadata-jvm (JetBrains, the "official" API): decodes and re-encodes @Metadata, which
+ *     couples this step to the Kotlin compiler version (readStrict must match within ±1) and can
+ *     drop fields on write — and it still needs ASM for class I/O. Better kept read-only, as a gate.
+ *   • Gradle Shadow: actively maintained, but relocates only META-INF kotlin_module files, NOT
+ *     per-class @Metadata, so it would not fix this bug; it is also AAR-unaware (adopting it = a
+ *     pipeline rewrite).
+ *   • shadow-kotlin-relocate / KSR: do rewrite per-class @Metadata, but are unmaintained Shadow
+ *     add-ons (KSR archived; the former ships only from a personal Maven repo) — supply-chain risk.
+ * The d2 rewrite below never decodes d1, so it stays version-agnostic across Kotlin releases, and its
+ * only dependency (ASM) is one JarJar already pulls in — the smallest, most durable option here.
+ *
+ * When rewrite is true the relocated bytes are returned; when false the class is left unchanged and
+ * `touched` is populated with any d2 entries that STILL name org.prebid.mobile — that is the
+ * regression gate (step 2c). ClassWriter(0) copies the class verbatim apart from the visited d2
+ * strings.
+ */
+byte[] rewriteKotlinMetadataD2(byte[] input, final List<String> touched, final boolean rewrite) {
+    def reader = new ClassReader(input)
+    def writer = new ClassWriter(0)
+    def visitor = new ClassVisitor(Opcodes.ASM9, writer) {
+        @Override
+        AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+            def annotation = super.visitAnnotation(descriptor, visible)
+            if (descriptor != 'Lkotlin/Metadata;') {
+                return annotation
+            }
+            return new AnnotationVisitor(Opcodes.ASM9, annotation) {
+                @Override
+                AnnotationVisitor visitArray(String arrayName) {
+                    def array = super.visitArray(arrayName)
+                    if (arrayName != 'd2') {
+                        return array
+                    }
+                    return new AnnotationVisitor(Opcodes.ASM9, array) {
+                        @Override
+                        void visit(String elementName, Object value) {
+                            if (value instanceof String) {
+                                def original = (String) value
+                                def relocated = original
+                                        .replace('org/prebid/mobile', 'com/life360/ads')
+                                        .replace('org.prebid.mobile', 'com.life360.ads')
+                                if (relocated != original) {
+                                    touched << original
+                                }
+                                super.visit(elementName, rewrite ? relocated : original)
+                            } else {
+                                super.visit(elementName, value)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    reader.accept(visitor, 0)
+    return writer.toByteArray()
 }
 
 task repackageReleaseAar(dependsOn: 'bundleReleaseAar') {
@@ -77,6 +158,48 @@ task repackageReleaseAar(dependsOn: 'bundleReleaseAar') {
 
         classesJar.delete()
         repackagedClassesJar.renameTo(classesJar)
+
+        // ── Step 2b: relocate Kotlin @Metadata (JarJar leaves it untouched) ──
+        def metaWorkDir = new File(workDir, "metadata")
+        copy {
+            from zipTree(classesJar)
+            into metaWorkDir
+        }
+
+        int rewrittenClasses = 0
+        def metadataOffenders = [:]
+        metaWorkDir.eachFileRecurse { f ->
+            if (!f.isFile() || !f.name.endsWith('.class')) {
+                return
+            }
+            def touched = []
+            def relocatedBytes = rewriteKotlinMetadataD2(f.bytes, touched, true)
+            if (!touched.isEmpty()) {
+                f.bytes = relocatedBytes
+                rewrittenClasses++
+            }
+
+            // ── Step 2c: regression gate — after relocation, no class's @Metadata
+            //    may still name org.prebid.mobile. Guards against metadata shapes
+            //    this pass does not cover (e.g. a future rule change).
+            def remaining = []
+            rewriteKotlinMetadataD2(f.bytes, remaining, false)
+            if (!remaining.isEmpty()) {
+                def relative = f.path - (metaWorkDir.path + File.separator)
+                metadataOffenders[relative] = remaining.unique()
+            }
+        }
+
+        if (!metadataOffenders.isEmpty()) {
+            throw new GradleException(
+                "Kotlin @Metadata relocation gate failed — ${metadataOffenders.size()} class(es) " +
+                "still reference org.prebid.mobile in @Metadata after relocation:\n" +
+                metadataOffenders.collect { name, refs -> "  ${name}: ${refs}" }.join("\n"))
+        }
+
+        classesJar.delete()
+        ant.zip(destfile: classesJar.absolutePath, basedir: metaWorkDir.absolutePath)
+        logger.lifecycle("Relocated Kotlin @Metadata in ${rewrittenClasses} class(es); gate passed.")
 
         // ── Step 3: fix AndroidManifest.xml (plain-text XML inside an AAR) ───
         //    Activity/service class names are stored as fully-qualified strings.
