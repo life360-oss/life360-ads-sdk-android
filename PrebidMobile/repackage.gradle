@@ -48,16 +48,30 @@ dependencies {
     jarjarConfig 'com.eed3si9n.jarjar:jarjar-assembly:1.8.1'
 }
 
-// Relocate org.prebid.mobile.** → com.life360.ads.** inside a class's Kotlin @Metadata.
-//
-// Every type name in @Metadata lives in its `d2` string array and is referenced by index from the
-// `d1` protobuf, so relocating the `d2` strings (preserving array order) relocates every type
-// reference without re-encoding `d1`. ASM handles the constant-pool/length bookkeeping.
-//
-// When rewrite is true the relocated bytes are returned; when false the class is left unchanged and
-// `touched` is populated with any d2 entries that STILL name org.prebid.mobile — that is the
-// regression gate (step 2c). ClassWriter(0) copies the class verbatim apart from the visited d2
-// strings.
+/**
+ * Relocate org.prebid.mobile.** → com.life360.ads.** inside a class's Kotlin @Metadata.
+ *
+ * Every type name in @Metadata lives in its `d2` string array and is referenced by index from the
+ * `d1` protobuf, so relocating the `d2` strings (preserving array order) relocates every type
+ * reference without re-encoding `d1`. ASM handles the constant-pool/length bookkeeping.
+ *
+ * Alternatives considered, and why this wins for a pure prefix rename:
+ *   • kotlin-metadata-jvm (JetBrains, the "official" API): decodes and re-encodes @Metadata, which
+ *     couples this step to the Kotlin compiler version (readStrict must match within ±1) and can
+ *     drop fields on write — and it still needs ASM for class I/O. Better kept read-only, as a gate.
+ *   • Gradle Shadow: actively maintained, but relocates only META-INF kotlin_module files, NOT
+ *     per-class @Metadata, so it would not fix this bug; it is also AAR-unaware (adopting it = a
+ *     pipeline rewrite).
+ *   • shadow-kotlin-relocate / KSR: do rewrite per-class @Metadata, but are unmaintained Shadow
+ *     add-ons (KSR archived; the former ships only from a personal Maven repo) — supply-chain risk.
+ * The d2 rewrite below never decodes d1, so it stays version-agnostic across Kotlin releases, and its
+ * only dependency (ASM) is one JarJar already pulls in — the smallest, most durable option here.
+ *
+ * When rewrite is true the relocated bytes are returned; when false the class is left unchanged and
+ * `touched` is populated with any d2 entries that STILL name org.prebid.mobile — that is the
+ * regression gate (step 2c). ClassWriter(0) copies the class verbatim apart from the visited d2
+ * strings.
+ */
 byte[] rewriteKotlinMetadataD2(byte[] input, final List<String> touched, final boolean rewrite) {
     def reader = new ClassReader(input)
     def writer = new ClassWriter(0)
