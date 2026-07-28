@@ -32,6 +32,10 @@ jobs:
         with:
           ref: develop
           fetch-depth: 0
+          # PAT (owned by a user whose role is on the ruleset bypass list) so the
+          # commit/tag push to protected develop bypasses the ruleset. Without this
+          # the push authenticates as the default token and is rejected.
+          token: ${{ secrets.RELEASE_BOT_TOKEN }}
 
       - name: Compute next version
         id: ver
