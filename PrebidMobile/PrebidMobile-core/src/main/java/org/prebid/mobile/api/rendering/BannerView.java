@@ -33,6 +33,7 @@ import org.prebid.mobile.api.data.VideoPlacementType;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.api.rendering.listeners.BannerVideoListener;
 import org.prebid.mobile.api.rendering.listeners.BannerViewListener;
+import org.prebid.mobile.api.rendering.listeners.NativoBannerViewListener;
 import org.prebid.mobile.api.rendering.pluginrenderer.PluginEventListener;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRegister;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRenderer;
@@ -47,7 +48,6 @@ import com.life360.ads.bid.NativoBidExt;
 import com.life360.ads.bid.NativoBidResponse;
 import com.life360.ads.bid.NativoAdType;
 import com.life360.ads.server.NativoServerProxy;
-import com.life360.ads.utils.NativoUtils;
 import org.prebid.mobile.rendering.bidding.listeners.BannerEventListener;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
@@ -105,18 +105,20 @@ public class BannerView extends FrameLayout {
     private final DisplayViewListener displayViewListener = new DisplayViewListener() {
         @Override
         public void onAdLoaded() {
-            if (bannerViewListener != null) {
-                if (nativoDidRenderBid(winningBid)) {
-                    // Notify if Nativo was responsible for rendering the bid
-                    bannerViewListener.onNativoAdLoaded(BannerView.this);
-                    return;
-                }
-                bannerViewListener.onAdLoaded(BannerView.this);
+            if (bannerViewListener == null) {
+                return;
             }
+            // Only route to the Nativo render path when the publisher opted in by implementing
+            // NativoBannerViewListener. instanceof is R8-safe, unlike reflecting on an override.
+            if (bannerViewListener instanceof NativoBannerViewListener && nativoDidRenderBid(winningBid)) {
+                ((NativoBannerViewListener) bannerViewListener).onNativoAdLoaded(BannerView.this);
+                return;
+            }
+            bannerViewListener.onAdLoaded(BannerView.this);
         }
 
         private boolean nativoDidRenderBid(BidResponse bidResponse) {
-            if (bidResponse instanceof NativoBidResponse && NativoUtils.hasImplementedNativoCallback(bannerViewListener)) {
+            if (bidResponse instanceof NativoBidResponse) {
                 NativoAdType adType = NativoBidExt.getNativoAdType(bidResponse.getWinningBid());
                 // Nativo rendering not used for type STANDARD_DISPLAY
                 return adType != NativoAdType.STANDARD_DISPLAY;
