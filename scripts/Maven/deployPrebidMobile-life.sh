@@ -248,8 +248,9 @@ function finalizeUploadToPortal() {
 # DEPLOYMENT
 ####################################################
 
-# Read GPG to sign the artifacts
-GPG_PASSPHRASE=""
+# Read GPG to sign the artifacts. Inherit the passphrase when it's already in the
+# environment so CI never reaches the interactive prompt below.
+GPG_PASSPHRASE="${GPG_PASSPHRASE:-}"
 
 function setupGPG() {
   if [[ -z "${GPG_KEYNAME:-}" ]]; then
@@ -258,7 +259,15 @@ function setupGPG() {
     return 2
   fi
 
-  read -r -s -p "GPG passphrase for '${GPG_KEYNAME}': " GPG_PASSPHRASE
+  if [[ -z "$GPG_PASSPHRASE" ]]; then
+    # A prompt on a non-interactive runner would just hit EOF and abort under `set -e`.
+    if [[ ! -t 0 ]]; then
+      echoX "ERROR: stdin is not a TTY and GPG_PASSPHRASE is unset — export it before running." >&2
+      return 2
+    fi
+    read -r -s -p "GPG passphrase for '${GPG_KEYNAME}': " GPG_PASSPHRASE
+    echo
+  fi
 
   export GPG_TTY=${GPG_TTY:-$(tty || true)}
 }
