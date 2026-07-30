@@ -49,4 +49,4 @@ jobs:
 
       - name: Build, sign, and deploy to Central
         working-directory: scripts
-        run: ./deployPrebidMobile-life.sh --version "$RELEASE_VERSION"
+        run: ./Maven/deployPrebidMobile-life.sh --version "$RELEASE_VERSION"
