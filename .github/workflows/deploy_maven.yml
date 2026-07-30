@@ -48,5 +48,5 @@ jobs:
           echo "RELEASE_VERSION=$TAG" >> "$GITHUB_ENV"
 
       - name: Build, sign, and deploy to Central
-        working-directory: scripts/Maven
+        working-directory: scripts
         run: ./deployPrebidMobile-life.sh --version "$RELEASE_VERSION"
