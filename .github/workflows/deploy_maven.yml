@@ -34,8 +34,10 @@ jobs:
 
       - name: Import GPG key
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "$GPG_PRIVATE_KEY" | base64 --decode | gpg --batch --import
           echo "default-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf || true
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Derive & verify version from tag
         run: |
