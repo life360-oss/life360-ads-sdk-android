@@ -20,6 +20,7 @@ import android.content.Context;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.exceptions.AdException;
+import org.prebid.mobile.rendering.models.AbstractCreative;
 import org.prebid.mobile.rendering.models.CreativeModel;
 import org.prebid.mobile.rendering.models.CreativeModelsMaker;
 import org.prebid.mobile.rendering.sdk.JSLibraryManager;
@@ -50,6 +51,16 @@ public class Transaction {
     private String loaderIdentifier;
 
     private long transactionCreateTime;
+
+    /**
+     * Wall clock at which the running retry chain's shared budget expires, or 0 when no chain is running.
+     * <p>
+     * One budget for the whole chain rather than a fresh deadline per attempt, so the worst-case wait for a
+     * terminal failure stays at twice the configured render deadline instead of scaling with
+     * {@link PrebidMobile#getCreativeFactoryTimeoutRetryCount()}. The publisher's slot is blocked for that
+     * whole wait.
+     */
+    private long retryBudgetDeadline;
 
     public interface Listener {
 
@@ -131,12 +142,14 @@ public class Transaction {
             // Initialize list of CreativeFactories
             creativeFactories.clear();
             for (CreativeModel creativeModel : creativeModels) {
+                CreativeFactoryListener factoryListener = new CreativeFactoryListener(this);
                 CreativeFactory creativeFactory = new CreativeFactory(contextReference.get(),
                         creativeModel,
-                        new CreativeFactoryListener(this),
+                        factoryListener,
                         omAdSessionManager,
                         interstitialManager
                 );
+                factoryListener.setFactory(creativeFactory);
                 creativeFactories.add(creativeFactory);
             }
 
@@ -164,30 +177,89 @@ public class Transaction {
             return false;
         }
         currentCreativeFactory = creativeFactoryIterator.next();
+        // Each model gets its own retry chain, and so its own budget.
+        retryBudgetDeadline = 0;
         currentCreativeFactory.start();
         return true;
     }
 
-    private CreativeFactory createFactoryForModel(CreativeModel creativeModel) throws AdException {
-        return new CreativeFactory(contextReference.get(),
+    private CreativeFactory createFactoryForModel(
+            CreativeModel creativeModel,
+            int remainingRetryAttempts,
+            long timeoutBudgetMs
+    ) throws AdException {
+        CreativeFactoryListener factoryListener = new CreativeFactoryListener(this, remainingRetryAttempts);
+        CreativeFactory factory = new CreativeFactory(contextReference.get(),
                 creativeModel,
-                new CreativeFactoryListener(this),
+                factoryListener,
                 omAdSessionManager,
-                interstitialManager
+                interstitialManager,
+                timeoutBudgetMs
         );
+        factoryListener.setFactory(factory);
+        return factory;
     }
 
-    private void retryCurrentFactory() {
-        LogUtil.warning(TAG, "Creative factory retry.");
+    /**
+     * Replaces the current CreativeFactory with a fresh one for the same model after a render timeout.
+     *
+     * @param remainingRetryAttempts retries left <em>after</em> this one, carried into the replacement's
+     *                               listener so the budget actually decreases across a retry chain.
+     * @param timeout                the render timeout that triggered this retry, reported as the terminal
+     *                               failure if the chain's time budget is already spent.
+     */
+    private void retryCurrentFactory(int remainingRetryAttempts, AdException timeout) {
+        LogUtil.warning(TAG, "Creative factory retry. Attempts remaining after this one: " + remainingRetryAttempts);
 
-        // Destroy current factory and recreate a fresh one for the same model
-        CreativeModel model = currentCreativeFactory.getCreative().getCreativeModel();;
-        if (currentCreativeFactory != null) {
-            currentCreativeFactory.destroy();
+        // A retry needs the model the previous factory was built from, which is only reachable through its
+        // creative. Both are nullable, so both are checked.
+        CreativeFactory previousFactory = currentCreativeFactory;
+        AbstractCreative previousCreative = previousFactory != null ? previousFactory.getCreative() : null;
+        CreativeModel model = previousCreative != null ? previousCreative.getCreativeModel() : null;
+        if (model == null) {
+            LogUtil.error(TAG, "Creative factory retry failed. No creative model to retry.");
+            listener.onTransactionFailure(
+                    new AdException(AdException.INTERNAL_ERROR, "Creative factory retry failed. No creative model to retry."),
+                    loaderIdentifier
+            );
+            destroy();
+            return;
         }
 
+        // The replacement occupies the old factory's slot so destroy() can still reach it. It must replace by
+        // index, not append: the list's size and indices are TransactionManager's bookkeeping (see
+        // TransactionManager#hasNextCreative), and appending would invalidate creativeFactoryIterator.
+        int slot = creativeFactories.indexOf(previousFactory);
+        if (slot < 0) {
+            // The current factory always comes from creativeFactories, so this means the two have diverged.
+            // Fail rather than start a retry that destroy() could never reach.
+            LogUtil.error(TAG, "Creative factory retry failed. Current factory is not tracked.");
+            listener.onTransactionFailure(
+                    new AdException(AdException.INTERNAL_ERROR, "Creative factory retry failed. Current factory is not tracked."),
+                    loaderIdentifier
+            );
+            destroy();
+            return;
+        }
+        // Seed the chain's budget from the deadline a first attempt would have used, then hand each retry
+        // only what is left of it. Once it is spent the timeout that got us here is the terminal failure.
+        long now = System.currentTimeMillis();
+        if (retryBudgetDeadline == 0) {
+            retryBudgetDeadline = now + CreativeFactory.configuredTimeoutMs(model);
+        }
+        long remainingBudgetMs = retryBudgetDeadline - now;
+        if (remainingBudgetMs <= 0) {
+            LogUtil.warning(TAG, "Creative factory retry budget spent. Failing.");
+            listener.onTransactionFailure(timeout, loaderIdentifier);
+            destroy();
+            return;
+        }
+
+        previousFactory.destroy();
+
         try {
-            currentCreativeFactory = createFactoryForModel(model);
+            currentCreativeFactory = createFactoryForModel(model, remainingRetryAttempts, remainingBudgetMs);
+            creativeFactories.set(slot, currentCreativeFactory);
             currentCreativeFactory.start();
         } catch (AdException e) {
             listener.onTransactionFailure(e, loaderIdentifier);
@@ -232,10 +304,41 @@ public class Transaction {
     public static class CreativeFactoryListener implements CreativeFactory.Listener {
 
         private WeakReference<Transaction> weakTransaction;
-        private int retryTimeoutAttempts = PrebidMobile.getCreativeFactoryTimeoutRetryCount();
+        /**
+         * Retries left for this listener's own factory. Threaded into each replacement listener by
+         * {@link Transaction#retryCurrentFactory(int, AdException)}, so the budget decreases across a chain
+         * rather than resetting per attempt.
+         */
+        private final int retryTimeoutAttempts;
+
+        /**
+         * The factory this listener was created for, or an empty reference when it was never wired up.
+         * Compared against {@link Transaction#currentCreativeFactory} so a callback from a factory the
+         * transaction has already moved past or replaced is dropped instead of mutating whichever factory is
+         * current now.
+         */
+        private WeakReference<CreativeFactory> weakFactory = new WeakReference<>(null);
 
         CreativeFactoryListener(Transaction transaction) {
+            this(transaction, PrebidMobile.getCreativeFactoryTimeoutRetryCount());
+        }
+
+        CreativeFactoryListener(Transaction transaction, int retryTimeoutAttempts) {
             weakTransaction = new WeakReference<>(transaction);
+            this.retryTimeoutAttempts = retryTimeoutAttempts;
+        }
+
+        void setFactory(CreativeFactory factory) {
+            weakFactory = new WeakReference<>(factory);
+        }
+
+        /**
+         * Whether this listener's factory has been superseded. An unset reference reports false, so a listener
+         * that was never wired to a factory keeps working.
+         */
+        private boolean isSuperseded(Transaction transaction) {
+            CreativeFactory factory = weakFactory.get();
+            return factory != null && factory != transaction.currentCreativeFactory;
         }
 
         @Override
@@ -243,6 +346,10 @@ public class Transaction {
             Transaction transaction = weakTransaction.get();
             if (transaction == null) {
                 LogUtil.warning(TAG, "CreativeMaker is null");
+                return;
+            }
+            if (isSuperseded(transaction)) {
+                LogUtil.warning(TAG, "Ignoring success from a superseded CreativeFactory.");
                 return;
             }
 
@@ -262,13 +369,17 @@ public class Transaction {
                 LogUtil.warning(TAG, "CreativeMaker is null");
                 return;
             }
+            if (isSuperseded(transaction)) {
+                LogUtil.warning(TAG, "Ignoring failure from a superseded CreativeFactory.");
+                return;
+            }
 
-            // Retry attempt after timeout
-            String msg = e != null ? e.getMessage() : null;
-            boolean isFactoryTimeout = CreativeFactory.TIMEOUT_ERROR_MESSAGE.equals(msg);
+            // Starting a retry is terminal for this callback: the transaction stays alive and the replacement
+            // factory owns reporting the outcome.
+            boolean isFactoryTimeout = CreativeFactory.isCreativeFactoryTimeout(e);
             if (isFactoryTimeout && retryTimeoutAttempts > 0) {
-                retryTimeoutAttempts--;
-                transaction.retryCurrentFactory();
+                transaction.retryCurrentFactory(retryTimeoutAttempts - 1, e);
+                return;
             }
 
             transaction.listener.onTransactionFailure(e, transaction.getLoaderIdentifier());

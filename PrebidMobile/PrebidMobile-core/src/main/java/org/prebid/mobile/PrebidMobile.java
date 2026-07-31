@@ -174,7 +174,11 @@ public class PrebidMobile {
     }
 
     /**
-     * Sets connection timeout for bid request.
+     * Sets connection timeout for bid request. This is the only source of the bid-request timeout; it is not
+     * adjusted from anything the server reports.
+     * <p>
+     * Also caps the socket read timeout, which is the smaller of this value and
+     * {@code BaseNetworkTask.SOCKET_TIMEOUT}.
      */
     public static void setTimeoutMillis(int timeoutMillis) {
         PrebidMobile.timeoutMillis = timeoutMillis;
@@ -450,16 +454,30 @@ public class PrebidMobile {
         return PrebidMobile.includeBidderKeys;
     }
 
+    /**
+     * {@link #setPbsConfig(PBSConfig)}
+     */
     public static PBSConfig getPbsConfig() {
         return pbsConfig;
     }
 
+    /**
+     * Sets a process-wide creative-factory timeout override, applying to every ad unit that has no
+     * server-supplied value of its own.
+     * <p>
+     * Server-supplied {@code cftbanner}/{@code cftprerender} values belong to the ad unit whose response
+     * carried them — see {@link org.prebid.mobile.configuration.AdUnitConfiguration#setPbsConfig(PBSConfig)}.
+     */
     public static void setPbsConfig(PBSConfig pbsConfig) {
         PrebidMobile.pbsConfig = pbsConfig;
     }
 
     /**
-     * {@link #setCreativeFactoryTimeout(int)}
+     * Process-wide banner creative-factory timeout. Prefer
+     * {@link org.prebid.mobile.configuration.AdUnitConfiguration#getCreativeFactoryTimeoutMs()}, which
+     * layers the ad unit's own server-supplied value on top of this default.
+     *
+     * @see #setCreativeFactoryTimeout(int)
      */
     public static int getCreativeFactoryTimeout() {
         if (pbsConfig != null){
@@ -480,7 +498,12 @@ public class PrebidMobile {
     }
 
     /**
-     * Priority Policy: PBSConfig > SDKConfig > Default
+     * Priority Policy: PBSConfig &gt; SDKConfig &gt; Default
+     * <p>
+     * Process-wide default. Prefer
+     * {@link org.prebid.mobile.configuration.AdUnitConfiguration#getCreativeFactoryTimeoutPreRenderMs()},
+     * which layers the ad unit's own server-supplied value on top of this.
+     *
      * @return creativeFactoryTimeoutPreRender in ms
      */
     public static int getCreativeFactoryTimeoutPreRenderContent() {

@@ -99,8 +99,12 @@ public class BidLoaderTest {
         verify(mockRequester, never()).startAdRequest();
     }
 
+    /**
+     * A registered listener owns the whole cycle, so it drives the refresh with Prebid Server enabled too.
+     * Reloading Prebid Server directly would skip the owner's other legs and reuse their previous results.
+     */
     @Test
-    public void whenRefreshTriggeredWithPrebidServer_CallLoadNotServerlessListener() {
+    public void whenRefreshTriggeredWithPrebidServer_NotifyRefreshListenerAndSkipLoad() {
         // Enabled by default; this test just needs the SDK marked initialized.
         PrebidMobileReflection.setFlagsThatSdkIsInitialized();
 
@@ -112,7 +116,21 @@ public class BidLoaderTest {
 
         triggerRefresh(serverLoader);
 
-        verify(mockServerlessListener, never()).onRefresh();
+        verify(mockServerlessListener).onRefresh();
+        verify(mockRequester, never()).startAdRequest();
+    }
+
+    /** With no listener registered there is nobody to run the cycle, so the refresh reloads Prebid Server. */
+    @Test
+    public void whenRefreshTriggeredWithPrebidServerAndNoRefreshListener_CallLoad() {
+        PrebidMobileReflection.setFlagsThatSdkIsInitialized();
+
+        BidLoader serverLoader = new BidLoader(mockAdConfiguration, bidRequesterListener);
+        WhiteBox.setInternalState(serverLoader, "bidRequester", mockRequester);
+        serverLoader.setBidRefreshListener(() -> true);
+
+        triggerRefresh(serverLoader);
+
         verify(mockRequester).startAdRequest();
     }
 

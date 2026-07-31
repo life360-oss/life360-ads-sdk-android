@@ -94,6 +94,51 @@ class NativoServerProxyTest {
 
     // endregion
 
+    // region decideWinner must not depend on retained proxy state
+
+    /**
+     * `requestNativoBid` clears `nativoBidResponse` at the start of every request, so a caller that resolves
+     * against the field loses its own bid as soon as a later request begins. Capturing the bid and passing it
+     * explicitly is what makes the outcome independent of request timing.
+     */
+    @Test
+    fun decideWinner_explicitNativoBid_survivesTheFieldBeingReset() {
+        val nativo = nativoResponseWithPrice(5.0)
+        val prebid = responseWithPrice(2.0)
+        setNativoResponse(nativo)
+
+        // A newer request clears the retained bid mid-cycle.
+        setNativoResponse(null)
+
+        // The single-argument form loses the Nativo bid...
+        assertSame(prebid, proxy.decideWinner(prebid))
+        // ...the explicit form still awards it correctly.
+        assertSame(nativo, proxy.decideWinner(prebid, nativo))
+    }
+
+    @Test
+    fun decideWinner_explicitForm_matchesTheRetainedFormWhenNothingHasReset() {
+        val nativo = nativoResponseWithPrice(5.0)
+        val prebid = responseWithPrice(2.0)
+        setNativoResponse(nativo)
+
+        assertSame(proxy.decideWinner(prebid), proxy.decideWinner(prebid, nativo))
+    }
+
+    @Test
+    fun destroy_cancelsTheRequesterAndClearsTheRetainedBid() {
+        val requester = Mockito.mock(com.life360.ads.networking.NativoBidRequester::class.java)
+        val proxyWithMock = NativoServerProxy(requester)
+        WhiteBox.setInternalState(proxyWithMock, "nativoBidResponse", nativoResponseWithPrice(1.0))
+
+        proxyWithMock.destroy()
+
+        Mockito.verify(requester).cancel()
+        assertNull(proxyWithMock.nativoBidResponse)
+    }
+
+    // endregion
+
     // region getBidFromResponse / getBidPrice
 
     @Test

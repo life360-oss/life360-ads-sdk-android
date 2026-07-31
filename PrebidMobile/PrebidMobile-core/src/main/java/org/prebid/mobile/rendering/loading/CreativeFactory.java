@@ -20,8 +20,9 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import org.prebid.mobile.LogUtil;
-import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.AdFormat;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
@@ -47,6 +48,13 @@ public class CreativeFactory {
     private static final String TAG = CreativeFactory.class.getSimpleName();
     public static final String TIMEOUT_ERROR_MESSAGE = "Creative factory Timeout";
 
+    /**
+     * The full text {@link AdException#getMessage()} produces for a render timeout. Derived rather than
+     * hardcoded so it tracks any change to AdException's formatting.
+     */
+    private static final String TIMEOUT_EXCEPTION_MESSAGE =
+            new AdException(AdException.INTERNAL_ERROR, TIMEOUT_ERROR_MESSAGE).getMessage();
+
     private AbstractCreative creative;
     private CreativeModel creativeModel;
 
@@ -57,6 +65,28 @@ public class CreativeFactory {
     private final InterstitialManager interstitialManager;
     private TimeoutState timeoutState = TimeoutState.PENDING;
     private Handler timeoutHandler = new Handler(Looper.getMainLooper());
+    private boolean timeoutScheduled;
+
+    /** Set by {@link #destroy()}. A destroyed factory reports nothing further to its listener. */
+    private boolean destroyed;
+
+    /**
+     * Held in a field because {@code Handler.removeCallbacks} matches on identity, so cancelling requires the
+     * same instance that was posted.
+     */
+    private final Runnable timeoutRunnable = () -> {
+        timeoutScheduled = false;
+        if (!destroyed && timeoutState != TimeoutState.FINISHED) {
+            timeoutState = TimeoutState.EXPIRED;
+            listener.onFailure(new AdException(AdException.INTERNAL_ERROR, TIMEOUT_ERROR_MESSAGE));
+        }
+    };
+
+    /**
+     * Time this factory gets to produce a creative, or 0 to take the ad unit's configured deadline. A retry
+     * attempt passes what is left of its chain's shared budget, so a chain cannot outlast that budget.
+     */
+    private final long timeoutBudgetMs;
 
     public CreativeFactory(
             Context context,
@@ -64,6 +94,17 @@ public class CreativeFactory {
             Listener listener,
             OmAdSessionManager omAdSessionManager,
             InterstitialManager interstitialManager
+    ) throws AdException {
+        this(context, creativeModel, listener, omAdSessionManager, interstitialManager, 0);
+    }
+
+    public CreativeFactory(
+            Context context,
+            CreativeModel creativeModel,
+            Listener listener,
+            OmAdSessionManager omAdSessionManager,
+            InterstitialManager interstitialManager,
+            long timeoutBudgetMs
     ) throws AdException {
         if (context == null) {
             throw new AdException(AdException.INTERNAL_ERROR, "Context is null");
@@ -82,6 +123,7 @@ public class CreativeFactory {
         this.creativeModel = creativeModel;
         this.omAdSessionManager = omAdSessionManager;
         this.interstitialManager = interstitialManager;
+        this.timeoutBudgetMs = timeoutBudgetMs;
     }
 
     public void start() {
@@ -107,14 +149,43 @@ public class CreativeFactory {
     }
 
     public void destroy() {
+        // Set before tearing down, so a callback already in flight is dropped rather than acted on.
+        // timeoutState is left as it is: creativeReady() needs EXPIRED to stay distinguishable from FINISHED.
+        destroyed = true;
         if (creative != null) {
             creative.destroy();
         }
-        timeoutHandler.removeCallbacks(null);
+        cancelTimeout();
     }
 
     public AbstractCreative getCreative() {
         return creative;
+    }
+
+    @VisibleForTesting
+    boolean hasPendingTimeout() {
+        return timeoutScheduled;
+    }
+
+    /**
+     * Whether the failure was this factory's render deadline elapsing, and so is worth retrying.
+     * <p>
+     * Matches on the formatted text of {@link AdException#getMessage()}, which prefixes the error type, not on
+     * {@link #TIMEOUT_ERROR_MESSAGE} alone.
+     */
+    static boolean isCreativeFactoryTimeout(@Nullable AdException exception) {
+        return exception != null && TIMEOUT_EXCEPTION_MESSAGE.equals(exception.getMessage());
+    }
+
+    /**
+     * Render deadline configured for {@code creativeModel}'s ad unit. Exposed so {@link Transaction} can size
+     * a retry chain's budget from the same value a first attempt would use.
+     */
+    static long configuredTimeoutMs(CreativeModel creativeModel) {
+        AdUnitConfiguration configuration = creativeModel.getAdConfiguration();
+        return configuration.isAdType(AdFormat.INTERSTITIAL)
+                ? configuration.getCreativeFactoryTimeoutPreRenderMs()
+                : configuration.getCreativeFactoryTimeoutMs();
     }
 
     private void attemptAuidCreative() throws Exception {
@@ -145,11 +216,9 @@ public class CreativeFactory {
             creativeModel.registerTrackingEvent(TrackingEvent.Events.CLICK, clickUrls);
         }
 
-        long creativeDownloadTimeout = PrebidMobile.getCreativeFactoryTimeout();
-        if (creativeModel.getAdConfiguration().isAdType(AdFormat.INTERSTITIAL)) {
-            creativeDownloadTimeout = PrebidMobile.getCreativeFactoryTimeoutPreRenderContent();
-        }
-        markWorkStart(creativeDownloadTimeout);
+        // The deadline belongs to this ad unit's own configuration, so a concurrently-loading ad unit cannot
+        // affect it.
+        markWorkStart(resolveTimeout(configuredTimeoutMs(creativeModel)));
         creative.load();
     }
 
@@ -195,7 +264,7 @@ public class CreativeFactory {
 
             newCreative.setResolutionListener(new CreativeFactoryCreativeResolutionListener(this));
             creative = newCreative;
-            markWorkStart(PrebidMobile.getCreativeFactoryTimeoutPreRenderContent());
+            markWorkStart(resolveTimeout(creativeModel.getAdConfiguration().getCreativeFactoryTimeoutPreRenderMs()));
             newCreative.load();
         } catch (Exception exception) {
             LogUtil.error(TAG, "VideoCreative creation failed: " + Log.getStackTraceString(exception));
@@ -206,14 +275,20 @@ public class CreativeFactory {
         }
     }
 
+    private long resolveTimeout(long configuredTimeout) {
+        return timeoutBudgetMs > 0 ? timeoutBudgetMs : configuredTimeout;
+    }
+
     private void markWorkStart(long timeout) {
         timeoutState = TimeoutState.RUNNING;
-        timeoutHandler.postDelayed(() -> {
-            if (timeoutState != TimeoutState.FINISHED) {
-                timeoutState = TimeoutState.EXPIRED;
-                listener.onFailure((new AdException(AdException.INTERNAL_ERROR, TIMEOUT_ERROR_MESSAGE)));
-            }
-        }, timeout);
+        timeoutHandler.removeCallbacks(timeoutRunnable);
+        timeoutScheduled = true;
+        timeoutHandler.postDelayed(timeoutRunnable, timeout);
+    }
+
+    private void cancelTimeout() {
+        timeoutScheduled = false;
+        timeoutHandler.removeCallbacks(timeoutRunnable);
     }
 
     /**
@@ -249,11 +324,16 @@ public class CreativeFactory {
                 LogUtil.warning(TAG, "CreativeFactory is null");
                 return;
             }
+            if (creativeFactory.destroyed) {
+                LogUtil.warning(TAG, "Creative ready for a destroyed CreativeFactory, backing out");
+                return;
+            }
             if (creativeFactory.timeoutState == TimeoutState.EXPIRED) {
                 creativeFactory.listener.onFailure(new AdException(AdException.INTERNAL_ERROR, "Creative Timeout"));
                 LogUtil.warning(TAG, "Creative timed out, backing out");
                 return;
             }
+            creativeFactory.cancelTimeout();
             creativeFactory.timeoutState = TimeoutState.FINISHED;
 
             creativeFactory.listener.onSuccess();
@@ -266,8 +346,12 @@ public class CreativeFactory {
                 LogUtil.warning(TAG, "CreativeFactory is null");
                 return;
             }
+            if (creativeFactory.destroyed) {
+                LogUtil.warning(TAG, "Creative failed for a destroyed CreativeFactory, backing out");
+                return;
+            }
 
-            creativeFactory.timeoutHandler.removeCallbacks(null);
+            creativeFactory.cancelTimeout();
             creativeFactory.timeoutState = TimeoutState.FINISHED;
 
             creativeFactory.listener.onFailure(error);

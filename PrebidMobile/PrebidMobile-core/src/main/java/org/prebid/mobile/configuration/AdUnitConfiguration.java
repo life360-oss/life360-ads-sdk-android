@@ -3,11 +3,13 @@ package org.prebid.mobile.configuration;
 import androidx.annotation.FloatRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
 
 import org.prebid.mobile.AdSize;
 import org.prebid.mobile.BannerParameters;
 import org.prebid.mobile.ContentObject;
 import org.prebid.mobile.LogUtil;
+import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.VideoParameters;
 import org.prebid.mobile.api.data.AdFormat;
 import org.prebid.mobile.api.data.AdUnitFormat;
@@ -47,6 +49,14 @@ public class AdUnitConfiguration {
     private double skipButtonArea = 0;
 
     private int maxVideoDuration = 3600;
+
+    /**
+     * Render timeouts the server supplied in <em>this</em> ad unit's own bid response. They belong here
+     * rather than on {@link PrebidMobile} because ad units load concurrently, and a response for one must
+     * not change the deadlines of another.
+     */
+    @Nullable
+    private PBSConfig pbsConfig;
 
     private String configId;
     private String pbAdSlot;
@@ -429,6 +439,53 @@ public class AdUnitConfiguration {
     public String getFingerprint() {
         return fingerprint;
     }
+
+    //region ==================== Per-ad-unit server-supplied timeouts
+
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public void setPbsConfig(@Nullable PBSConfig pbsConfig) {
+        this.pbsConfig = pbsConfig;
+    }
+
+    /**
+     * Lets a configuration derived from this one (a VAST end card, say) inherit the same server-supplied
+     * deadlines, since those arrived with the bid response that produced both.
+     */
+    @Nullable
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public PBSConfig getPbsConfig() {
+        return pbsConfig;
+    }
+
+    /**
+     * Time allowed to parse and render a banner creative for this ad unit.
+     * <p>
+     * Priority Policy: PBSConfig &gt; SDKConfig &gt; Default — same policy as
+     * {@link PrebidMobile#getCreativeFactoryTimeout()}, but the PBSConfig part is scoped to the ad unit
+     * whose bid response carried it.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public int getCreativeFactoryTimeoutMs() {
+        if (pbsConfig != null && pbsConfig.getBannerTimeout() != 0) {
+            return pbsConfig.getBannerTimeout();
+        }
+        return PrebidMobile.getCreativeFactoryTimeout();
+    }
+
+    /**
+     * Time allowed to pre-render content (interstitial and VAST) for this ad unit.
+     * <p>
+     * Priority Policy: PBSConfig &gt; SDKConfig &gt; Default.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public int getCreativeFactoryTimeoutPreRenderMs() {
+        if (pbsConfig != null && pbsConfig.getPreRenderTimeout() != 0) {
+            return pbsConfig.getPreRenderTimeout();
+        }
+        return PrebidMobile.getCreativeFactoryTimeoutPreRenderContent();
+    }
+
+    //endregion ==================== Per-ad-unit server-supplied timeouts
 
     @Nullable
     public String getGpid() {

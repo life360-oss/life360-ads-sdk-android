@@ -2,7 +2,10 @@ package org.prebid.mobile.rendering.models.openrtb.bidRequests;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.Position;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import com.life360.ads.core.BuildConfig;
@@ -10,6 +13,10 @@ import com.life360.ads.core.BuildConfig;
 import static org.junit.Assert.*;
 
 public class MobileSdkPassThroughTest {
+
+    /** Mirrors PrebidMobile's private DEFAULT_BANNER_TIMEOUT / DEFAULT_PRERENDER_TIMEOUT. */
+    private static final int DEFAULT_BANNER_TIMEOUT = 6 * 1000;
+    private static final int DEFAULT_PRERENDER_TIMEOUT = 30 * 1000;
 
     @Test
     public void create_putWrongJsonObject_returnNull() throws JSONException {
@@ -149,5 +156,68 @@ public class MobileSdkPassThroughTest {
         assertNotNull(subject);
         assertEquals((Integer) 22000, subject.preRenderTimeout);
     }
+
+    //region ==================== Server-supplied timeouts are scoped per ad unit
+
+    private static final String SDK_CONFIG_JSON =
+            "{\"prebid\":{\"passthrough\":[{\"type\":\"prebidmobilesdk\", \n\"sdkconfiguration\": {\n\"cftbanner\": 1, \n\"cftprerender\": 2}}]}}";
+
+    @Before
+    public void resetProcessWideTimeouts() {
+        PrebidMobile.setPbsConfig(null);
+        PrebidMobile.setCreativeFactoryTimeout(DEFAULT_BANNER_TIMEOUT);
+        PrebidMobile.setCreativeFactoryTimeoutPreRenderContent(DEFAULT_PRERENDER_TIMEOUT);
+    }
+
+    @After
+    public void clearProcessWideTimeouts() {
+        resetProcessWideTimeouts();
+    }
+
+    /**
+     * Parsing must not touch process-wide state. A write from the constructor would let one ad unit's response
+     * reconfigure the render deadline of every ad unit in the process.
+     */
+    @Test
+    public void create_putObjectWithSdkConfiguration_doesNotWriteProcessGlobal() throws JSONException {
+        MobileSdkPassThrough subject = MobileSdkPassThrough.create(new JSONObject(SDK_CONFIG_JSON));
+
+        assertNotNull(subject);
+        assertNull(PrebidMobile.getPbsConfig());
+        assertEquals(DEFAULT_BANNER_TIMEOUT, PrebidMobile.getCreativeFactoryTimeout());
+        assertEquals(DEFAULT_PRERENDER_TIMEOUT, PrebidMobile.getCreativeFactoryTimeoutPreRenderContent());
+    }
+
+    @Test
+    public void modifyAdUnitConfiguration_sdkConfigurationTimeouts_applyOnlyToTheOwningAdUnit()
+    throws JSONException {
+        MobileSdkPassThrough subject = MobileSdkPassThrough.create(new JSONObject(SDK_CONFIG_JSON));
+        assertNotNull(subject);
+        AdUnitConfiguration adUnitThatGotTheResponse = new AdUnitConfiguration();
+        AdUnitConfiguration concurrentlyLoadingAdUnit = new AdUnitConfiguration();
+
+        subject.modifyAdUnitConfiguration(adUnitThatGotTheResponse);
+
+        assertEquals(1, adUnitThatGotTheResponse.getCreativeFactoryTimeoutMs());
+        assertEquals(2, adUnitThatGotTheResponse.getCreativeFactoryTimeoutPreRenderMs());
+        assertEquals(DEFAULT_BANNER_TIMEOUT, concurrentlyLoadingAdUnit.getCreativeFactoryTimeoutMs());
+        assertEquals(DEFAULT_PRERENDER_TIMEOUT, concurrentlyLoadingAdUnit.getCreativeFactoryTimeoutPreRenderMs());
+    }
+
+    /** With no server-supplied value the ad unit falls back to the process-wide default. */
+    @Test
+    public void adUnitWithoutServerSuppliedTimeouts_fallsBackToProcessDefaults() {
+        PrebidMobile.setCreativeFactoryTimeout(7000);
+        PrebidMobile.setCreativeFactoryTimeoutPreRenderContent(25000);
+
+        AdUnitConfiguration adUnitConfiguration = new AdUnitConfiguration();
+
+        assertEquals(7000, adUnitConfiguration.getCreativeFactoryTimeoutMs());
+        assertEquals(25000, adUnitConfiguration.getCreativeFactoryTimeoutPreRenderMs());
+    }
+
+
+
+    //endregion ==================== Server-supplied timeouts are scoped per ad unit
 
 }

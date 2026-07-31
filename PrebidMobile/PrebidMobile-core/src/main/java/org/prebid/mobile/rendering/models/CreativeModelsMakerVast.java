@@ -218,6 +218,9 @@ public class CreativeModelsMakerVast extends CreativeModelsMaker {
 
                 AdUnitConfiguration endCardConfig = new AdUnitConfiguration();
                 endCardConfig.setRewardManager(adConfiguration.getRewardManager());
+                // The end card came from the same bid response, so it renders under the same server-supplied
+                // deadlines as the video.
+                endCardConfig.setPbsConfig(adConfiguration.getPbsConfig());
                 endCardConfig.setAdFormat(AdFormat.INTERSTITIAL);
                 endCardConfig.setRewarded(adConfiguration.isRewarded());
                 endCardConfig.getRewardManager().setRewardedExt(adConfiguration.getRewardManager().getRewardedExt());

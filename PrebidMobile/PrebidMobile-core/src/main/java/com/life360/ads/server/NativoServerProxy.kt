@@ -11,9 +11,10 @@ import org.prebid.mobile.rendering.bidding.data.bid.BidResponse
 
 typealias NativoBidResponseCallback = (bidResponse: NativoBidResponse?, shouldRenderImmediately: Boolean, error: AdException?) -> Unit
 
-class NativoServerProxy {
+class NativoServerProxy @JvmOverloads constructor(
+    private val nativoBidRequester: NativoBidRequester = NativoBidRequester()
+) {
 
-    private val nativoBidRequester = NativoBidRequester()
     var nativoBidResponse : NativoBidResponse? = null
         private set
 
@@ -38,8 +39,25 @@ class NativoServerProxy {
         }
     }
 
+    /**
+     * Cancels any in-flight Nativo request and clears the retained bid. Owners must call this from their own
+     * teardown, otherwise the Nativo leg outlives them and a stale bid renders into a dead view.
+     */
+    fun destroy() {
+        nativoBidRequester.cancel()
+        nativoBidResponse = null
+    }
+
+    /**
+     * Picks the higher-priced of the two bids.
+     *
+     * Prefer this overload. [requestNativoBid] clears [nativoBidResponse] at the start of every request, so
+     * resolving against that field couples the outcome to when the other async leg happens to complete.
+     * Callers should capture the bid their own cycle received and pass it explicitly.
+     */
     fun decideWinner(
-        prebidBidResponse: BidResponse?
+        prebidBidResponse: BidResponse?,
+        nativoBidResponse: NativoBidResponse?
     ): BidResponse? {
         if (prebidBidResponse == null) {
             return nativoBidResponse
@@ -55,6 +73,20 @@ class NativoServerProxy {
         }
         return prebidBidResponse
     }
+
+    /**
+     * Resolves against whatever Nativo bid this proxy currently holds.
+     *
+     * @deprecated Retained for compatibility. Use [decideWinner] with an explicit Nativo bid so the
+     * outcome does not depend on when the other async leg happens to complete.
+     */
+    @Deprecated(
+        message = "Pass the cycle's own Nativo bid explicitly.",
+        replaceWith = ReplaceWith("decideWinner(prebidBidResponse, nativoBidResponse)")
+    )
+    fun decideWinner(
+        prebidBidResponse: BidResponse?
+    ): BidResponse? = decideWinner(prebidBidResponse, nativoBidResponse)
 
     fun getBidFromResponse(response: BidResponse?): Bid? {
         return response?.getWinningBid()

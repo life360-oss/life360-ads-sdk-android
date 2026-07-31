@@ -17,7 +17,6 @@
 package org.prebid.mobile.rendering.bidding.loader;
 
 import androidx.annotation.NonNull;
-import com.life360.ads.Life360Ads;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidEventDelegate;
 import org.prebid.mobile.PrebidMobile;
@@ -33,7 +32,6 @@ import org.prebid.mobile.rendering.networking.modelcontrollers.BidRequester;
 import org.prebid.mobile.rendering.networking.parameters.AdRequestInput;
 import org.prebid.mobile.rendering.utils.helpers.RefreshTimerTask;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.lang.Math.max;
@@ -42,8 +40,6 @@ public class BidLoader {
 
     private final static String TAG = BidLoader.class.getSimpleName();
 
-    private final static String TMAX_REQUEST_KEY = "tmaxrequest";
-    private static boolean sTimeoutHasChanged = false;
 
     private AdUnitConfiguration adConfiguration;
     private BidRequester bidRequester;
@@ -62,7 +58,6 @@ public class BidLoader {
                 failedToLoadBid(new AdException(AdException.FAILED_TO_PARSE_RESPONSE, bidResponse.getParseError()));
                 return;
             }
-            checkTmax(response, bidResponse);
             updateAdUnitConfiguration(bidResponse);
             if (requestListener != null) {
                 setupRefreshTimer();
@@ -111,13 +106,12 @@ public class BidLoader {
             return;
         }
 
-        // In serverless mode there is no Prebid Server to load from; re-run the Nativo + event handler
-        // path via the registered listener instead.
-        if (!Life360Ads.isPrebidServerEnabled()) {
-            if (serverlessRefreshListener != null) {
-                LogUtil.debug(TAG, "refresh triggered: serverless reload being called ");
-                serverlessRefreshListener.onRefresh();
-            }
+        // A registered listener owns the whole load cycle (Nativo, then Prebid Server, then the ad server), so
+        // it drives the refresh in both serverless and Prebid Server modes. Reloading Prebid Server on its own
+        // would skip the Nativo leg and re-use the previous cycle's Nativo bid.
+        if (serverlessRefreshListener != null) {
+            LogUtil.debug(TAG, "refresh triggered: reload listener being called ");
+            serverlessRefreshListener.onRefresh();
             return;
         }
 
@@ -226,19 +220,6 @@ public class BidLoader {
         requestListener.onError(exception);
     }
 
-    private void checkTmax(
-            BaseNetworkTask.GetUrlResult response,
-            BidResponse parsedResponse
-    ) {
-        Map<String, Object> extMap = parsedResponse.getExt().getMap();
-        if (!sTimeoutHasChanged && extMap.containsKey(TMAX_REQUEST_KEY)) {
-            int tmaxRequest = (int) extMap.get(TMAX_REQUEST_KEY);
-            // adding 200ms as safe time
-            int timeout = (int) Math.min(response.responseTime + tmaxRequest + 200, BaseNetworkTask.TIMEOUT_DEFAULT);
-            PrebidMobile.setTimeoutMillis(timeout);
-            sTimeoutHasChanged = true;
-        }
-    }
 
     /**
      * Gets mobile sdk pass through object, combines it with user's ad unit
@@ -266,8 +247,8 @@ public class BidLoader {
     }
 
     /**
-     * Serverless mode has no Prebid Server to reload from, so the refresh timer re-runs the full
-     * Nativo + event handler flow through this listener instead of calling {@link #load()}.
+     * Owns a whole refresh cycle. When one is registered the refresh timer calls it instead of {@link #load()},
+     * so the cycle starts from its owner's entry point and re-runs every leg rather than Prebid Server alone.
      */
     public interface ServerlessRefreshListener {
 
