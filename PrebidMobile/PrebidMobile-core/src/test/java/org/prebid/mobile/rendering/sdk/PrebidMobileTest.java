@@ -17,6 +17,7 @@
 package org.prebid.mobile.rendering.sdk;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -74,6 +75,8 @@ public class PrebidMobileTest {
         PrebidMobile.setStoredAuctionResponse(null);
         PrebidMobile.clearStoredBidResponses();
         PrebidMobileReflection.setDisableStatusCheck(false);
+        PrebidMobileReflection.setFlagsThatSdkIsNotInitialized();
+        Life360Ads.setPrebidServerEnabled(true);
     }
 
     // Sets Build.VERSION.SDK_INT to LOLLIPOP(21) which prevents ProviderInstaller from execution
@@ -117,12 +120,32 @@ public class PrebidMobileTest {
     }
 
     @Test
-    public void initializeSdkWithServerUrl_LeavesPrebidServerEnabled() {
-        // The Prebid Server is enabled by default and initializeSdk never toggles it explicitly;
-        // it must simply leave the default in place.
+    public void initializeSdkWithServerUrl_EnablesPrebidServer() {
         PrebidMobile.initializeSdk(null, "https://prebid.example.com/openrtb2/auction", null);
 
         assertTrue(Life360Ads.isPrebidServerEnabled());
+    }
+
+    @Test
+    public void initializeSdkAfterInitializeWithoutPrebid_ReEnablesPrebidServer() {
+        // Supplying a server URL is the opt-in to Prebid Server demand, which is how an app that started
+        // serverless adds it later.
+        Life360Ads.setPrebidServerEnabled(false);
+
+        PrebidMobile.initializeSdk(null, "https://prebid.example.com/openrtb2/auction", null);
+
+        assertTrue(Life360Ads.isPrebidServerEnabled());
+    }
+
+    @Test
+    public void initializeSdkWithNullServerUrl_LeavesPrebidServerDisabled() {
+        // A rejected call must not change the mode, or a typo would silently start Prebid bidding with no
+        // server to bid against.
+        Life360Ads.setPrebidServerEnabled(false);
+
+        PrebidMobile.initializeSdk(null, null, null);
+
+        assertFalse(Life360Ads.isPrebidServerEnabled());
     }
 
     @Test

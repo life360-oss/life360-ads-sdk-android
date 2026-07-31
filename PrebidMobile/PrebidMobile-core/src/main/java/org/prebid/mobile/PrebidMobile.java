@@ -29,6 +29,7 @@ import org.prebid.mobile.api.data.InitializationStatus;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRegister;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRenderer;
 import org.prebid.mobile.configuration.PBSConfig;
+import com.life360.ads.Life360Ads;
 import com.life360.ads.core.BuildConfig;
 import org.prebid.mobile.rendering.listeners.SdkInitializationListener;
 import org.prebid.mobile.rendering.mraid.MraidEnv;
@@ -269,6 +270,7 @@ public class PrebidMobile {
             return;
         }
         PrebidMobile.host = Host.createCustomHost(serverURL);
+        Life360Ads.setPrebidServerEnabled(true);
         SdkInitializer.init(context, listener);
     }
 

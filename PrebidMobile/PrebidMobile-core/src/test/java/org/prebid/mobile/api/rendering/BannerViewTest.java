@@ -43,7 +43,7 @@ import org.prebid.mobile.rendering.bidding.listeners.BannerEventListener;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
-import com.life360.ads.reflection.Life360AdsReflection;
+import com.life360.ads.Life360Ads;
 import org.prebid.mobile.rendering.bidding.loader.BidLoader;
 import org.prebid.mobile.rendering.models.AdPosition;
 import org.prebid.mobile.rendering.utils.broadcast.ScreenStateReceiver;
@@ -100,7 +100,7 @@ public class BannerViewTest {
 
     @After
     public void tearDown() {
-        Life360AdsReflection.setPrebidServerEnabled(true);
+        Life360Ads.setPrebidServerEnabled(true);
     }
 
     @Test
@@ -362,16 +362,48 @@ public class BannerViewTest {
     }
 
     @Test
-    public void loadAdInServerlessMode_SkipBidLoaderRequestAdWithBidAndScheduleRefresh() {
+    public void loadAdInServerlessMode_SkipBidLoaderRequestAdWithBidAndScheduleRefresh() throws Exception {
         // Serverless mode: no Prebid Server. The (real) Nativo request fails synchronously because no
-        // context is set, so loadAd() falls through to the serverless branch.
-        Life360AdsReflection.setPrebidServerEnabled(false);
+        // context is set, so loadAd() falls through to the serverless branch. The mode is captured when the
+        // view is built, so it has to be set before constructing rather than before loading.
+        Life360Ads.setPrebidServerEnabled(false);
+        BannerView serverlessBanner = newBannerViewWithMockBidLoader();
 
-        bannerView.loadAd();
+        serverlessBanner.loadAd();
 
         verify(mockBidLoader, never()).load();
         verify(mockEventHandler, times(1)).requestAdWithBid(org.mockito.Mockito.isNull());
         verify(mockBidLoader, times(1)).setupRefreshTimer();
+    }
+
+    @Test
+    public void loadAdAfterPrebidServerAddedLater_ServerlessViewKeepsItsModeAndNewViewUsesPrebid()
+            throws Exception {
+        // The scenario a dual init produces: one view built serverless, a Prebid Server added afterwards,
+        // then a second view. Each keeps the mode it was built with.
+        Life360Ads.setPrebidServerEnabled(false);
+        BannerView serverlessBanner = newBannerViewWithMockBidLoader();
+
+        Life360Ads.setPrebidServerEnabled(true);
+        BidLoader secondMockBidLoader = mock(BidLoader.class);
+        BannerView prebidBanner = new BannerView(mockContext, AD_UNIT_ID, mockEventHandler);
+        WhiteBox.field(BannerView.class, "bidLoader").set(prebidBanner, secondMockBidLoader);
+
+        serverlessBanner.loadAd();
+        prebidBanner.loadAd();
+
+        verify(mockBidLoader, never()).load();
+        verify(secondMockBidLoader, times(1)).load();
+    }
+
+    /**
+     * A view whose BidLoader is mocked, so a load can be observed without a real bid request. Built fresh
+     * rather than reusing the shared field because the Prebid Server mode is captured at construction.
+     */
+    private BannerView newBannerViewWithMockBidLoader() throws IllegalAccessException {
+        BannerView view = new BannerView(mockContext, AD_UNIT_ID, mockEventHandler);
+        WhiteBox.field(BannerView.class, "bidLoader").set(view, mockBidLoader);
+        return view;
     }
 
     @Test
