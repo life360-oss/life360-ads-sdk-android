@@ -22,7 +22,8 @@ import static android.os.Looper.getMainLooper;
 import android.app.Activity;
 import android.content.Context;
 
-import com.life360.ads.reflection.Life360AdsReflection;
+
+import com.life360.ads.Life360Ads;
 
 import org.hamcrest.MatcherAssert;
 import org.junit.After;
@@ -86,10 +87,11 @@ public class SdkInitializerTest {
         serverWarning = null;
         PrebidMobileReflection.setHost("");
         Reflection.setStaticVariableTo(PrebidMobile.class, "customStatusEndpoint", null);
-        PrebidContextHolder.clearContext();
-        Reflection.setStaticVariableTo(InitializationNotifier.class, "initializationInProgress", false);
+        // Clears the context, the in-progress flag and the host the /status check last ran against, so a
+        // test starts from an SDK that has never initialized rather than one mid-reconfiguration.
+        PrebidMobileReflection.setFlagsThatSdkIsNotInitialized();
         Reflection.setStaticVariableTo(PrebidMobile.class, "disableStatusCheck", false);
-        Life360AdsReflection.setPrebidServerEnabled(true);
+        Life360Ads.setPrebidServerEnabled(true);
     }
 
 
@@ -204,6 +206,91 @@ public class SdkInitializerTest {
     }
 
 
+    //region ==================== Init on an already-initialized SDK
+
+    @Test
+    public void init_serverlessThenPrebidServerAdded_statusCheckRunsAndListenerIsCalled()
+            throws InterruptedException {
+        // Serverless init: no /status check, so the server that arrives next is still owed one.
+        Life360Ads.setPrebidServerEnabled(false);
+        SdkInitializer.init(context, null);
+        advanceBackgroundTasks();
+        assertTrue(PrebidMobile.isSdkInitialized());
+        assertEquals(0, server.getRequestCount());
+
+        Life360Ads.setPrebidServerEnabled(true);
+        setStatusResponse(200, "Good");
+        SdkInitializer.init(context, createListener());
+        advanceBackgroundTasks();
+
+        assertTrue(isSuccessful);
+        assertNull(error);
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    public void init_serverlessThenPrebidServerWithBadStatus_warnsButStaysInitialized()
+            throws InterruptedException {
+        // A bad status must not tear the SDK down: the Nativo and ad-server legs still work.
+        Life360Ads.setPrebidServerEnabled(false);
+        SdkInitializer.init(context, null);
+        advanceBackgroundTasks();
+
+        Life360Ads.setPrebidServerEnabled(true);
+        setStatusResponse(404, "");
+        SdkInitializer.init(context, createListener());
+        advanceBackgroundTasks();
+
+        assertTrue(serverWarning);
+        assertEquals("Server status is not ok! Status code: 404", error);
+        assertTrue(PrebidMobile.isSdkInitialized());
+    }
+
+    @Test
+    public void init_repeatedWithSameHost_notifiesListenerWithoutASecondStatusCheck()
+            throws InterruptedException {
+        setStatusResponse(200, "Good");
+        SdkInitializer.init(context, null);
+        advanceBackgroundTasks();
+        assertEquals(1, server.getRequestCount());
+
+        SdkInitializer.init(context, createListener());
+        advanceBackgroundTasks();
+
+        // The caller still gets an answer, but a server already reported on is not re-checked. This is what
+        // keeps the lazy init in ad view constructors from firing a request per view.
+        assertTrue(isSuccessful);
+        assertNull(error);
+        assertEquals(1, server.getRequestCount());
+    }
+
+    @Test
+    public void init_alreadyInitializedWithNullListener_makesNoRequestAndDoesNotReinitialize()
+            throws InterruptedException {
+        setStatusResponse(200, "Good");
+        SdkInitializer.init(context, null);
+        advanceBackgroundTasks();
+
+        SdkInitializer.init(context, null);
+        advanceBackgroundTasks();
+
+        assertEquals(1, server.getRequestCount());
+        assertTrue(PrebidMobile.isSdkInitialized());
+    }
+
+    @Test
+    public void init_whileInitializationInProgress_isIgnored() {
+        Reflection.setStaticVariableTo(InitializationNotifier.class, "initializationInProgress", true);
+
+        SdkInitializer.init(context, createListener());
+
+        // The pending call owns the completion; a second listener would be answered out of turn.
+        assertNull(isSuccessful);
+        assertFalse(calledAlready);
+    }
+
+    //endregion ==================== Init on an already-initialized SDK
+
     @Test
     public void runBackgroundTasks_checkStartedTasks() throws InterruptedException {
         ExecutorService executorMock = mock(ExecutorService.class);
@@ -298,7 +385,7 @@ public class SdkInitializerTest {
 
     @Test
     public void runBackgroundTasks_serverlessMode_statusCheckSkipped() throws InterruptedException {
-        Life360AdsReflection.setPrebidServerEnabled(false);
+        Life360Ads.setPrebidServerEnabled(false);
 
         ExecutorService executorMock = mock(ExecutorService.class);
         SdkInitializer.runBackgroundTasks(mock(InitializationNotifier.class), executorMock);

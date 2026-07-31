@@ -2,6 +2,7 @@ package com.life360.ads
 
 import android.content.Context
 import androidx.annotation.MainThread
+import androidx.annotation.RestrictTo
 import com.life360.ads.core.BuildConfig
 import org.prebid.mobile.PrebidMobile
 import org.prebid.mobile.rendering.listeners.SdkInitializationListener
@@ -28,12 +29,12 @@ object Life360Ads {
     val sdkName: String = PrebidMobile.SDK_NAME
 
     /**
-     * Whether the SDK is using a Prebid Server. Enabled by default.
-     * [initializeWithoutPrebid] turns it off.
+     * Whether the SDK was initialized with or without Prebid Server
+     * [initializeWithoutPrebid] sets it off.
      */
     @JvmStatic
+    @set:RestrictTo(RestrictTo.Scope.LIBRARY)
     var isPrebidServerEnabled: Boolean = true
-        private set
 
     /**
      * Allows the SDK to share geolocation on Nativo bid requests if permission is granted by the user.

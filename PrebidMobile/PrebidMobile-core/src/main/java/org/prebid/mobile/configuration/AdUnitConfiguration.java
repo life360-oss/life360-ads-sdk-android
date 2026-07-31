@@ -3,6 +3,9 @@ package org.prebid.mobile.configuration;
 import androidx.annotation.FloatRange;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RestrictTo;
+
+import com.life360.ads.Life360Ads;
 
 import org.prebid.mobile.AdSize;
 import org.prebid.mobile.BannerParameters;
@@ -47,6 +50,8 @@ public class AdUnitConfiguration {
     private double skipButtonArea = 0;
 
     private int maxVideoDuration = 3600;
+
+    private boolean prebidServerEnabled = Life360Ads.isPrebidServerEnabled();
 
     private String configId;
     private String pbAdSlot;
@@ -429,6 +434,26 @@ public class AdUnitConfiguration {
     public String getFingerprint() {
         return fingerprint;
     }
+
+    //region ==================== Per-ad-unit Prebid Server mode
+
+    /**
+     * {@link #prebidServerEnabled}
+     */
+    public boolean isPrebidServerEnabled() {
+        return prebidServerEnabled;
+    }
+
+    /**
+     * Overrides the mode captured at creation. Only meaningful before the first load: an ad unit that has
+     * already started a cycle would change legs part-way through.
+     */
+    @RestrictTo(RestrictTo.Scope.LIBRARY)
+    public void setPrebidServerEnabled(boolean prebidServerEnabled) {
+        this.prebidServerEnabled = prebidServerEnabled;
+    }
+
+    //endregion ==================== Per-ad-unit Prebid Server mode
 
     @Nullable
     public String getGpid() {

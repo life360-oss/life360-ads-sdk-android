@@ -27,11 +27,22 @@ public class SdkInitializer {
 
     private static final String TAG = SdkInitializer.class.getSimpleName();
 
+    @Nullable
+    private static volatile String statusCheckedHostUrl = null;
+
     public static void init(
             @Nullable Context context,
             @Nullable SdkInitializationListener listener
     ) {
-        if (PrebidMobile.isSdkInitialized() || InitializationNotifier.isInitializationInProgress()) {
+        if (InitializationNotifier.isInitializationInProgress()) {
+            if (listener != null) {
+                LogUtil.error(TAG, "Initialization is already in progress. This listener will not be called; "
+                        + "wait for the one passed to the pending call.");
+            }
+            return;
+        }
+        if (PrebidMobile.isSdkInitialized()) {
+            applyConfigurationChange(listener);
             return;
         }
 
@@ -86,7 +97,8 @@ public class SdkInitializer {
     ) {
         try {
             Future<String> statusRequesterResult = null;
-            if (!PrebidMobile.shouldDisableStatusCheck() && Life360Ads.isPrebidServerEnabled()) {
+            if (shouldCheckServerStatus()) {
+                statusCheckedHostUrl = PrebidMobile.getPrebidServerHost().getHostUrl();
                 statusRequesterResult = executor.submit(new StatusRequester());
             } else {
                 LogUtil.debug(TAG, "Prebid SDK initialization skipping status check");
@@ -107,6 +119,45 @@ public class SdkInitializer {
         } catch (Exception exception) {
             initializationNotifier.initializationFailed("Exception during initialization: " + Log.getStackTraceString(exception));
         }
+    }
+
+    /**
+     * Handles an init call that arrives once the SDK is already up — most often a Prebid Server being added
+     * to an app that initialized serverless.
+     * <p>
+     * The one-time setup (renderers, OM SDK, context, managers, JS libraries) is already done and must not
+     * run twice, so all that remains is the /status check the new server is owed and the caller's listener.
+     */
+    private static void applyConfigurationChange(@Nullable SdkInitializationListener listener) {
+        String hostUrl = PrebidMobile.getPrebidServerHost().getHostUrl();
+        boolean statusCheckOwed = shouldCheckServerStatus() && !hostUrl.equals(statusCheckedHostUrl);
+
+        if (!statusCheckOwed) {
+            // Ad views re-enter init from their constructors with a null listener, so with nothing to report
+            // this has to stay free of side effects.
+            if (listener != null) {
+                new InitializationNotifier(listener).initializationCompleted(null);
+            }
+            return;
+        }
+
+        statusCheckedHostUrl = hostUrl;
+        InitializationNotifier initializationNotifier = new InitializationNotifier(listener);
+        new Thread(() -> {
+            String statusRequesterError;
+            try {
+                statusRequesterError = StatusRequester.makeRequest();
+            } catch (Throwable throwable) {
+                statusRequesterError = "Exception during status check: " + throwable.getMessage();
+            }
+            // A bad status is a warning, never a failure: the SDK is initialized and every non-Prebid leg
+            // still works, so the context must survive.
+            initializationNotifier.initializationCompleted(statusRequesterError);
+        }).start();
+    }
+
+    private static boolean shouldCheckServerStatus() {
+        return !PrebidMobile.shouldDisableStatusCheck() && Life360Ads.isPrebidServerEnabled();
     }
 
     @Nullable

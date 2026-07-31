@@ -8,6 +8,7 @@ import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.reflection.Reflection;
 import org.prebid.mobile.rendering.sdk.InitializationNotifier;
 import org.prebid.mobile.rendering.sdk.PrebidContextHolder;
+import org.prebid.mobile.rendering.sdk.SdkInitializer;
 
 public class PrebidMobileReflection {
 
@@ -32,6 +33,9 @@ public class PrebidMobileReflection {
     public static void setFlagsThatSdkIsNotInitialized() {
         Reflection.setStaticVariableTo(InitializationNotifier.class, "tasksCompletedSuccessfully", false);
         Reflection.setStaticVariableTo(InitializationNotifier.class, "initializationInProgress", false);
+        // An SDK that has never initialized has never checked a server's status either. Leaving this set
+        // would make a later init in the same JVM believe the server was already reported on.
+        Reflection.setStaticVariableTo(SdkInitializer.class, "statusCheckedHostUrl", null);
         PrebidContextHolder.clearContext();
     }
 

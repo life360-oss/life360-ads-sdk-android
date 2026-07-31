@@ -48,6 +48,20 @@ The SDK orchestrates the following 9-step flow for each ad request:
 8. (If using GAM) If a Prebid or Nativo bid wins, GAM serves a passback creative signaling the SDK to take over rendering
 9. The SDK rendering module renders the winning bid
 
+## Initialization
+
+With a Prebid Server:
+
+```kotlin
+PrebidMobile.initializeSdk(context, "https://your-prebid-server/openrtb2/auction") { status -> }
+```
+
+Without one — Nativo demand plus your own ad server only.
+
+```kotlin
+Life360Ads.initializeWithoutPrebid(context) { status -> }
+```
+
 ## Repackaging
 
 All public classes in this SDK are published under the `com.life360.ads` namespace rather than the upstream `org.prebid.mobile` namespace. The repackaging is done at build time using [JarJar](https://github.com/eed3si9n/jarjar-maven-plugin) — source files stay on `org.prebid.mobile` so the branch remains easy to merge with upstream Prebid releases.
