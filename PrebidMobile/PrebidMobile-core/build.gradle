@@ -39,6 +39,8 @@ dependencies {
     implementation libs.androidx.annotation
     implementation libs.kotlin.stdlib
 
+    implementation libs.androidx.browser
+
     implementation libs.google.play.services.base
     implementation libs.google.play.services.ads.identifier
     implementation libs.exoplayer.core

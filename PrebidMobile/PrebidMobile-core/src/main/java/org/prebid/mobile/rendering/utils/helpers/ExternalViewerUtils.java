@@ -27,8 +27,13 @@ import android.webkit.URLUtil;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsIntent;
 import org.prebid.mobile.LogUtil;
+import org.prebid.mobile.PrebidMobile;
 import com.life360.ads.core.BuildConfig;
+
+import java.util.Collections;
 import org.prebid.mobile.rendering.listeners.OnBrowserActionResultListener;
 import org.prebid.mobile.rendering.listeners.OnBrowserActionResultListener.BrowserActionResult;
 import org.prebid.mobile.rendering.utils.url.ActionNotResolvedException;
@@ -118,6 +123,14 @@ public class ExternalViewerUtils {
                                     boolean shouldFireEvents, @Nullable
                                         OnBrowserActionResultListener onBrowserActionResultListener) {
 
+        // Open the click-through in a Chrome Custom Tab when enabled via
+        // PrebidMobile.setUseChromeCustomTabsForClicks(true) and a supporting browser
+        // exists; falls through to the in-app AdBrowserActivity WebView otherwise.
+        if (PrebidMobile.getUseChromeCustomTabsForClicks() && launchCustomChromeTab(context, url)) {
+            notifyBrowserActionSuccess(BrowserActionResult.EXTERNAL_BROWSER, onBrowserActionResultListener);
+            return;
+        }
+
         Intent intent = new Intent(context, AdBrowserActivity.class);
         intent.putExtra(AdBrowserActivity.EXTRA_URL, url);
         intent.putExtra(AdBrowserActivity.EXTRA_DENSITY_SCALING_ENABLED, false);
@@ -135,6 +148,34 @@ public class ExternalViewerUtils {
         } else {
             startExternalBrowser(context, url);
             notifyBrowserActionSuccess(BrowserActionResult.EXTERNAL_BROWSER, onBrowserActionResultListener);
+        }
+    }
+
+    /**
+     * Opens {@code url} in a Chrome Custom Tab. Returns false (so the caller can
+     * fall back to the WebView/external browser) when no Custom Tabs-capable
+     * browser is installed or launching fails.
+     */
+    private static boolean launchCustomChromeTab(Context context, String url) {
+        if (context == null || url == null || !URLUtil.isValidUrl(url)) {
+            return false;
+        }
+        try {
+            String packageName = CustomTabsClient.getPackageName(context, Collections.emptyList());
+            if (packageName == null) {
+                LogUtil.debug(TAG, "launchCustomChromeTab(): no Custom Tabs provider available.");
+                return false;
+            }
+            CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder().build();
+            customTabsIntent.intent.setPackage(packageName);
+            if (!(context instanceof Activity)) {
+                customTabsIntent.intent.addFlags(FLAG_ACTIVITY_NEW_TASK);
+            }
+            customTabsIntent.launchUrl(context, Uri.parse(url));
+            return true;
+        } catch (Throwable throwable) {
+            LogUtil.error(TAG, "launchCustomChromeTab(): failed to launch, falling back. " + throwable.getMessage());
+            return false;
         }
     }
 

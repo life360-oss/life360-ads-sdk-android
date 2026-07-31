@@ -145,8 +145,25 @@ public class PrebidMobile {
     @NonNull
     private static WeakReference<PrebidEventDelegate> eventDelegateReference = new WeakReference<>(null);
     private static boolean disableStatusCheck = false;
+    private static boolean useChromeCustomTabsForClicks = false;
 
     private PrebidMobile() {
+    }
+
+    /**
+     * When enabled, ad clickthroughs open in a Chrome Custom Tab (falling back to the
+     * in-app WebView when no Custom Tabs-capable browser is installed). When disabled
+     * (default), clicks open in the in-app {@code AdBrowserActivity} WebView.
+     */
+    public static void setUseChromeCustomTabsForClicks(boolean useChromeCustomTabs) {
+        PrebidMobile.useChromeCustomTabsForClicks = useChromeCustomTabs;
+    }
+
+    /**
+     * {@link #setUseChromeCustomTabsForClicks(boolean)}
+     */
+    public static boolean getUseChromeCustomTabsForClicks() {
+        return useChromeCustomTabsForClicks;
     }
 
 
