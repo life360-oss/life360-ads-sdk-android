@@ -30,6 +30,14 @@ class NativoBidRequester : ExternalBidRequester {
     private val requestInProgress = AtomicBoolean(false)
     private var networkTask: BaseNetworkTask? = null
 
+    /**
+     * Set by [cancel] and checked in every [ResponseHandler] callback.
+     *
+     * `AsyncTask.cancel(true)` does not suppress an `onPostExecute` that is already posted, so cancelling
+     * the task alone cannot prevent a late callback — the flag is what does.
+     */
+    private val cancelled = AtomicBoolean(false)
+
     override fun requestBids(
         adUnitConfiguration: AdUnitConfiguration,
         listener: ExternalBidRequesterListener
@@ -38,6 +46,7 @@ class NativoBidRequester : ExternalBidRequester {
             listener.onComplete(null, AdException(AdException.INTERNAL_ERROR, "Nativo request already in progress."))
             return
         }
+        cancelled.set(false)
 
         val context = PrebidContextHolder.getContext()
         if (context == null) {
@@ -69,6 +78,10 @@ class NativoBidRequester : ExternalBidRequester {
             override fun onResponse(response: BaseNetworkTask.GetUrlResult) {
                 requestInProgress.set(false)
                 networkTask = null
+                if (cancelled.get()) {
+                    LogUtil.debug(TAG, "Dropping Nativo response for a cancelled request.")
+                    return
+                }
 
                 if (response.statusCode == HTTP_NO_CONTENT) {
                     listener.onComplete(null, null)
@@ -113,10 +126,31 @@ class NativoBidRequester : ExternalBidRequester {
         return NativoBidExt.isOwnedOperated(bid)
     }
 
+    /**
+     * Cancels any in-flight request and detaches its callback. Call this whenever the requesting view is
+     * destroyed or recycled, or the request stays alive to deliver a bid into a dead view.
+     *
+     * [BaseNetworkTask.destroy] is called directly, not just `cancel`, because it nulls the task's response
+     * handler — that is what makes an already-queued `onPostExecute` return early instead of dispatching.
+     */
+    fun cancel() {
+        cancelled.set(true)
+        networkTask?.let {
+            it.cancel(true)
+            it.destroy()
+        }
+        networkTask = null
+        requestInProgress.set(false)
+    }
+
     private fun finishWithError(listener: ExternalBidRequesterListener, exception: AdException) {
         if (exception !is NoBidException) LogUtil.debug(TAG, exception.message)
         requestInProgress.set(false)
         networkTask = null
+        if (cancelled.get()) {
+            LogUtil.debug(TAG, "Dropping Nativo error for a cancelled request.")
+            return
+        }
         listener.onComplete(null, exception)
     }
 

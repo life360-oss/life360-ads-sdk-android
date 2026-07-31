@@ -48,6 +48,7 @@ import com.life360.ads.bid.NativoBidExt;
 import com.life360.ads.bid.NativoBidResponse;
 import com.life360.ads.bid.NativoAdType;
 import com.life360.ads.server.NativoServerProxy;
+import com.life360.ads.state.BannerLoadState;
 import org.prebid.mobile.rendering.bidding.listeners.BannerEventListener;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
@@ -85,7 +86,12 @@ public class BannerView extends FrameLayout {
     private AdException prebidException;
 
     private NativoServerProxy nativoServer = new NativoServerProxy();
-    private boolean isNativoBidRequestInProgress;
+
+    @NonNull
+    private BannerLoadState state = BannerLoadState.IDLE;
+
+    @Nullable
+    private NativoBidResponse nativoBidResponse;
 
     private final ScreenStateReceiver screenStateReceiver = new ScreenStateReceiver();
 
@@ -96,15 +102,13 @@ public class BannerView extends FrameLayout {
 
     private int refreshIntervalSec = 0;
 
-    private boolean isPrimaryAdServerRequestInProgress;
-    private boolean adFailed;
-
     private String nativeStylesCreative = null;
 
     //region ==================== Listener implementation
     private final DisplayViewListener displayViewListener = new DisplayViewListener() {
         @Override
         public void onAdLoaded() {
+            transitionTo(BannerLoadState.SHOWING);
             if (bannerViewListener == null) {
                 return;
             }
@@ -136,6 +140,7 @@ public class BannerView extends FrameLayout {
 
         @Override
         public void onAdFailed(AdException exception) {
+            transitionTo(BannerLoadState.FAILED);
             if (bannerViewListener != null) {
                 bannerViewListener.onAdFailed(BannerView.this, exception);
             }
@@ -200,8 +205,10 @@ public class BannerView extends FrameLayout {
         public void onFetchCompleted(BidResponse response) {
             prebidException = null;
             bidResponse = response;
-            winningBid = nativoServer.decideWinner(response);
-            isPrimaryAdServerRequestInProgress = winningBid != null;
+            // Resolve against the Nativo bid this cycle received, not the proxy's copy, which belongs to
+            // whichever request started most recently.
+            winningBid = nativoServer.decideWinner(response, nativoBidResponse);
+            transitionTo(adServerStateFor(winningBid));
             eventHandler.requestAdWithBid(winningBid);
         }
 
@@ -211,8 +218,8 @@ public class BannerView extends FrameLayout {
             prebidException = exception;
 
             bidResponse = null;
-            winningBid = nativoServer.getNativoBidResponse();
-            isPrimaryAdServerRequestInProgress = winningBid != null;
+            winningBid = nativoBidResponse;
+            transitionTo(adServerStateFor(winningBid));
             eventHandler.requestAdWithBid(winningBid);
         }
     };
@@ -220,8 +227,6 @@ public class BannerView extends FrameLayout {
     private final BannerEventListener bannerEventListener = new BannerEventListener() {
         @Override
         public void onSdkWin(@Nullable BidResponse sdkBidResponse) {
-            markPrimaryAdRequestFinished();
-
             winningBid = sdkBidResponse;
             AdException parsedException = RenderingExceptionParser.getPrebidException(sdkBidResponse, prebidException);
             if (parsedException != null) {
@@ -234,8 +239,6 @@ public class BannerView extends FrameLayout {
 
         @Override
         public void onAdServerWin(View view) {
-            markPrimaryAdRequestFinished();
-
             notifyAdLoadedListener();
             displayAdServerView(view);
         }
@@ -245,9 +248,7 @@ public class BannerView extends FrameLayout {
          */
         @Override
         public void onAdFailed(AdException gamException) {
-            markPrimaryAdRequestFinished();
-
-            winningBid = nativoServer.decideWinner(bidResponse);
+            winningBid = nativoServer.decideWinner(bidResponse, nativoBidResponse);
             boolean prebidAlsoWithoutAd = RenderingExceptionParser.isBidInvalid(winningBid);
             if (prebidAlsoWithoutAd) {
                 AdException parsedException = RenderingExceptionParser.getPrebidException(winningBid, prebidException);
@@ -337,31 +338,35 @@ public class BannerView extends FrameLayout {
             return;
         }
 
-        if (isNativoBidRequestInProgress) {
-            LogUtil.debug(TAG, "loadAd: Skipped. Nativo bid request is in progress.");
+        // The single gate for starting a cycle, covering every in-flight state and every entry point
+        // (publisher call and refresh tick alike).
+        if (!state.canStartLoad()) {
+            LogUtil.debug(TAG, "loadAd: Skipped. Load already in progress (state=" + state + ").");
             return;
         }
 
-        if (isPrimaryAdServerRequestInProgress) {
-            LogUtil.debug(TAG, "loadAd: Skipped. Loading is in progress.");
-            return;
-        }
-
-        isNativoBidRequestInProgress = true;
+        nativoBidResponse = null;
+        transitionTo(BannerLoadState.LOADING);
         nativoServer.requestNativoBid(adUnitConfig, (bidResponse, shouldRenderImmediately, error) -> {
-            isNativoBidRequestInProgress = false;
+            // Completions arrive from AsyncTask.onPostExecute on the main looper, so one can land after
+            // destroy(). Dropping it here is what stops a stale bid rendering into a torn-down view.
+            if (state == BannerLoadState.DESTROYED) {
+                LogUtil.debug(TAG, "Dropping Nativo bid response. BannerView is destroyed.");
+                return null;
+            }
+            nativoBidResponse = bidResponse;
 
             if (shouldRenderImmediately && bidResponse != null) {
-                isPrimaryAdServerRequestInProgress = false;
                 // Start Nativo rendering
                 bannerEventListener.onSdkWin(bidResponse);
             } else if (Life360Ads.isPrebidServerEnabled()) {
                 // Start Prebid Server bid request
+                transitionTo(BannerLoadState.LOADING);
                 bidLoader.load();
             } else {
                 prebidException = error;
-                winningBid = nativoServer.getNativoBidResponse();
-                isPrimaryAdServerRequestInProgress = winningBid != null;
+                winningBid = bidResponse;
+                transitionTo(adServerStateFor(winningBid));
                 eventHandler.requestAdWithBid(winningBid);
                 bidLoader.setupRefreshTimer();
             }
@@ -384,6 +389,10 @@ public class BannerView extends FrameLayout {
      * Cleans up resources when destroyed.
      */
     public void destroy() {
+        // Mark the state terminal before tearing anything down, so a completion already queued on the main
+        // looper is dropped rather than touching half-released state.
+        state = BannerLoadState.DESTROYED;
+
         if (eventHandler != null) {
             eventHandler.destroy();
         }
@@ -393,6 +402,11 @@ public class BannerView extends FrameLayout {
         if (displayView != null) {
             displayView.destroy();
         }
+        // The Nativo leg has its own in-flight request and must be cancelled explicitly.
+        if (nativoServer != null) {
+            nativoServer.destroy();
+        }
+        nativoBidResponse = null;
         bidRequesterListener = null;
 
         PrebidMobilePluginRegister.getInstance().unregisterEventListener(adUnitConfig.getFingerprint());
@@ -518,8 +532,10 @@ public class BannerView extends FrameLayout {
         final VisibilityChecker visibilityChecker = new VisibilityChecker(visibilityTrackerOption);
 
         bidLoader.setBidRefreshListener(() -> {
-            if (adFailed) {
-                adFailed = false;
+            // A cycle that ended without an ad may retry regardless of visibility, once: the state is consumed
+            // here so the allowance does not persist across ticks.
+            if (state == BannerLoadState.FAILED) {
+                transitionTo(BannerLoadState.IDLE);
                 return true;
             }
 
@@ -527,8 +543,8 @@ public class BannerView extends FrameLayout {
             return visibilityChecker.isVisibleForRefresh(this) && isWindowVisibleToUser;
         });
 
-        // In serverless mode the refresh timer can't reload from Prebid Server; re-run the full
-        // Nativo + event handler flow instead.
+        // A refresh is a full load cycle, so it goes through loadAd() and is admitted by the same gate as a
+        // publisher-initiated load.
         bidLoader.setServerlessRefreshListener(this::loadAd);
     }
 
@@ -540,6 +556,9 @@ public class BannerView extends FrameLayout {
         adUnitConfig.addSizes(eventHandler.getAdSizeArray());
     }
     private void displayAdWithBid(BidResponse bidResponse) {
+        // Stay LOADING: the creative loads asynchronously, and only displayViewListener knows whether it
+        // resolved. Reaching a load-admitting state here would let a refresh tick start a second cycle on top
+        // of a render still in flight.
         if (indexOfChild(displayView) != -1) {
             displayView.destroy();
             displayView = null;
@@ -576,23 +595,51 @@ public class BannerView extends FrameLayout {
         }
     }
 
-    private void markPrimaryAdRequestFinished() {
-        isPrimaryAdServerRequestInProgress = false;
-    }
-
     private void notifyAdLoadedListener() {
+        transitionTo(BannerLoadState.SHOWING);
         if (bannerViewListener != null) {
             bannerViewListener.onAdLoaded(BannerView.this);
         }
     }
 
     private void notifyErrorListener(AdException exception) {
-        adFailed = true;
+        transitionTo(BannerLoadState.FAILED);
         LogUtil.debug(TAG, "Ad failed listener: " + exception);
         if (bannerViewListener != null) {
             bannerViewListener.onAdFailed(BannerView.this, exception);
         }
     }
+
+    //region ==================== Load-cycle state machine
+
+    /**
+     * State to hold while the ad server works on {@code winningBid}.
+     * <p>
+     * With no bid to hand over, the ad server may still serve its own demand but this view is not waiting on
+     * anything it can recognise, so the slot stays free for the next refresh rather than blocking on a callback
+     * that may never come.
+     */
+    @NonNull
+    private BannerLoadState adServerStateFor(@Nullable BidResponse winningBid) {
+        return winningBid != null ? BannerLoadState.LOADING : BannerLoadState.IDLE;
+    }
+
+    /**
+     * Records a state change. {@link BannerLoadState#DESTROYED} is terminal, which is what keeps a
+     * callback that was already queued from resurrecting a torn-down view.
+     *
+     * @return false if the transition was refused.
+     */
+    private boolean transitionTo(@NonNull BannerLoadState next) {
+        if (state == BannerLoadState.DESTROYED) {
+            LogUtil.debug(TAG, "Ignoring transition to " + next + ". BannerView is destroyed.");
+            return false;
+        }
+        state = next;
+        return true;
+    }
+
+    //endregion ==================== Load-cycle state machine
 
         /**
      * Returns the winning bid response. This can be either a Prebid bid or a Nativo bid,
@@ -641,13 +688,25 @@ public class BannerView extends FrameLayout {
 
     @VisibleForTesting
     final Bid getWinnerBid() {
-        BidResponse response = nativoServer.decideWinner(bidResponse);
+        BidResponse response = nativoServer.decideWinner(bidResponse, nativoBidResponse);
         return nativoServer.getBidFromResponse(response);
     }
 
     @VisibleForTesting
     final boolean isPrimaryAdServerRequestInProgress() {
-        return isPrimaryAdServerRequestInProgress;
+        return state == BannerLoadState.LOADING;
+    }
+
+    @VisibleForTesting
+    @NonNull
+    final BannerLoadState getLoadState() {
+        return state;
+    }
+
+    /** Lets tests place the view in a mid-cycle state without driving the whole flow. */
+    @VisibleForTesting
+    final void setLoadStateForTest(@NonNull BannerLoadState state) {
+        this.state = state;
     }
     //endregion ==================== HelperMethods for Unit Tests
 }

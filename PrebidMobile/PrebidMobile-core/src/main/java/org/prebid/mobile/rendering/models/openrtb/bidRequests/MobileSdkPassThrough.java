@@ -6,7 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.prebid.mobile.LogUtil;
-import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.Position;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.configuration.PBSConfig;
@@ -87,6 +86,13 @@ public class MobileSdkPassThrough {
         }
         if (fromBid.skipButtonPosition == null) {
             fromBid.skipButtonPosition = fromRoot.skipButtonPosition;
+        }
+        // Unset is 0 rather than null for these two, so they need isUnset instead of a null check.
+        if (isUnset(fromBid.bannerTimeout)) {
+            fromBid.bannerTimeout = fromRoot.bannerTimeout;
+        }
+        if (isUnset(fromBid.preRenderTimeout)) {
+            fromBid.preRenderTimeout = fromRoot.preRenderTimeout;
         }
         return fromBid;
     }
@@ -176,7 +182,8 @@ public class MobileSdkPassThrough {
                 if (configuration.has("cftprerender")) {
                     getAndSave("cftprerender", Integer.class, it -> preRenderTimeout = it);
                 }
-                PrebidMobile.setPbsConfig(new PBSConfig(bannerTimeout, preRenderTimeout));
+                // Parsing only records the values. They belong to a single ad unit, and
+                // modifyAdUnitConfiguration() is what applies them to it.
             }
         } catch (JSONException exception) {
             LogUtil.error(TAG, "Can't parse sdkconfiguration");
@@ -207,6 +214,23 @@ public class MobileSdkPassThrough {
         if (skipButtonPosition != null) {
             adUnitConfiguration.setSkipButtonPosition(skipButtonPosition);
         }
+        // Apply the server-supplied creative-factory timeouts to the ad unit that received them. BidLoader
+        // calls this with that ad unit's own configuration, so no two ad units can affect each other.
+        // Written on every response, including as null: the ad unit outlives one response, so a deadline
+        // that response did not carry must not survive into the next refresh cycle.
+        if (isUnset(bannerTimeout) && isUnset(preRenderTimeout)) {
+            adUnitConfiguration.setPbsConfig(null);
+        } else {
+            adUnitConfiguration.setPbsConfig(new PBSConfig(
+                    isUnset(bannerTimeout) ? 0 : bannerTimeout,
+                    isUnset(preRenderTimeout) ? 0 : preRenderTimeout
+            ));
+        }
+    }
+
+    /** {@link #bannerTimeout} and {@link #preRenderTimeout} use 0, not null, to mean "not supplied". */
+    private static boolean isUnset(@Nullable Integer timeout) {
+        return timeout == null || timeout == 0;
     }
 
     private <T> void getAndSave(

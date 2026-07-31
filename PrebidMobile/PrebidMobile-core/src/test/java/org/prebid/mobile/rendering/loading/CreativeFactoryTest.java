@@ -19,9 +19,11 @@ package org.prebid.mobile.rendering.loading;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Handler;
+import android.os.Looper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.AdFormat;
 import org.prebid.mobile.api.exceptions.AdException;
@@ -40,6 +42,7 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,6 +51,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static org.prebid.mobile.rendering.models.CreativeModelsMakerVast.HTML_CREATIVE_TAG;
+import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 19)
@@ -211,22 +215,79 @@ public class CreativeFactoryTest {
         verify(mockCreativeFactoryListener, never()).onSuccess();
     }
 
+    /**
+     * Asserts the effect against a real Handler rather than verifying a {@code removeCallbacks} call on a mock.
+     * A mocked Handler accepts any argument, so it cannot tell a cancellation that works from one that does
+     * not.
+     */
     @Test
-    public void destroyCalled_removeCallbacksCalled()
-    throws IllegalAccessException, AdException {
+    public void destroyBeforeTimeout_timeoutCallbackDoesNotFire() throws Exception {
         CreativeFactory creativeFactory = new CreativeFactory(mockContext,
                 mockModel,
                 mockListener,
                 mockOmAdSessionManager,
                 mockInterstitialManager
         );
-        Handler mockHandler = mock(Handler.class);
-
-        WhiteBox.field(CreativeFactory.class, "timeoutHandler").set(creativeFactory, mockHandler);
+        WhiteBox.method(CreativeFactory.class, "markWorkStart", long.class).invoke(creativeFactory, 50L);
+        assertTrue(creativeFactory.hasPendingTimeout());
 
         creativeFactory.destroy();
 
-        verify(mockHandler).removeCallbacks(null);
+        assertFalse(creativeFactory.hasPendingTimeout());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+        verify(mockListener, never()).onFailure(any(AdException.class));
+    }
+
+    /** Control for {@link #destroyBeforeTimeout_timeoutCallbackDoesNotFire()}: the timeout still works. */
+    @Test
+    public void timeoutExpiresWithoutDestroy_reportsTimeoutFailure() throws Exception {
+        CreativeFactory creativeFactory = new CreativeFactory(mockContext,
+                mockModel,
+                mockListener,
+                mockOmAdSessionManager,
+                mockInterstitialManager
+        );
+        WhiteBox.method(CreativeFactory.class, "markWorkStart", long.class).invoke(creativeFactory, 50L);
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+
+        ArgumentCaptor<AdException> captor = ArgumentCaptor.forClass(AdException.class);
+        verify(mockListener).onFailure(captor.capture());
+        assertTrue(CreativeFactory.isCreativeFactoryTimeout(captor.getValue()));
+        assertFalse(creativeFactory.hasPendingTimeout());
+    }
+
+    /**
+     * AdException.getMessage() prefixes the error type, so comparing it against TIMEOUT_ERROR_MESSAGE directly
+     * silently never matches. This pins the helper against the exception the factory actually throws.
+     */
+    @Test
+    public void isCreativeFactoryTimeout_matchesTheExceptionTheFactoryActuallyThrows() {
+        AdException timeout = new AdException(AdException.INTERNAL_ERROR, CreativeFactory.TIMEOUT_ERROR_MESSAGE);
+
+        assertTrue(CreativeFactory.isCreativeFactoryTimeout(timeout));
+        assertFalse(CreativeFactory.isCreativeFactoryTimeout(null));
+        assertFalse(CreativeFactory.isCreativeFactoryTimeout(
+                new AdException(AdException.INTERNAL_ERROR, "Some other error")));
+    }
+
+    /** A second markWorkStart must not leave the first timeout armed. */
+    @Test
+    public void markWorkStartTwice_onlyTheLatestTimeoutIsArmed() throws Exception {
+        CreativeFactory creativeFactory = new CreativeFactory(mockContext,
+                mockModel,
+                mockListener,
+                mockOmAdSessionManager,
+                mockInterstitialManager
+        );
+        WhiteBox.method(CreativeFactory.class, "markWorkStart", long.class).invoke(creativeFactory, 50L);
+        WhiteBox.method(CreativeFactory.class, "markWorkStart", long.class).invoke(creativeFactory, 500L);
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+        verify(mockListener, never()).onFailure(any(AdException.class));
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        verify(mockListener, times(1)).onFailure(any(AdException.class));
     }
 
     @Test

@@ -274,7 +274,9 @@ public class BaseNetworkTask
 
         connection.setConnectTimeout(PrebidMobile.getTimeoutMillis());
         if (!(this instanceof FileDownloadTask)) {
-            int timeout = PrebidMobile.getTimeoutModified() ? PrebidMobile.getTimeoutMillis() : SOCKET_TIMEOUT;
+            // Bounded by both the configured request timeout and SOCKET_TIMEOUT, so a read can never stall
+            // longer than the caller asked to wait for the request as a whole.
+            int timeout = Math.min(PrebidMobile.getTimeoutMillis(), SOCKET_TIMEOUT);
             connection.setReadTimeout(timeout);
         }
 

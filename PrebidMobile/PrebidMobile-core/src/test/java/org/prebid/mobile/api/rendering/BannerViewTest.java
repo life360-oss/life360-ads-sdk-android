@@ -44,6 +44,7 @@ import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
 import com.life360.ads.reflection.Life360AdsReflection;
+import com.life360.ads.state.BannerLoadState;
 import org.prebid.mobile.rendering.bidding.loader.BidLoader;
 import org.prebid.mobile.rendering.models.AdPosition;
 import org.prebid.mobile.rendering.utils.broadcast.ScreenStateReceiver;
@@ -313,8 +314,12 @@ public class BannerViewTest {
         verify(mockBannerListener, times(1)).onAdFailed(bannerView, new AdException(AdException.FAILED_TO_LOAD_BIDS, "GAM status: \"Exception: SDK internal error, GAM error\". Prebid status: \"Exception: SDK internal error, Unknown exception\""));
     }
 
+    /**
+     * The ad server failed but the SDK bid renders instead, so the cycle stays in LOADING until the creative
+     * resolves through {@code displayViewListener}.
+     */
     @Test
-    public void onFailedAndWithWinnerBid_AdRequestStatusIsFinishedNotifySdkWin() {
+    public void onFailedAndWithWinnerBid_NotifySdkWinAndStayLoadingWhileRendering() {
         changePrimaryAdServerRequestStatus(true);
 
         final BidResponse mockBidResponse = mock(BidResponse.class);
@@ -326,7 +331,7 @@ public class BannerViewTest {
         bannerView.setBidResponse(mockBidResponse);
         spyEventListener.onAdFailed(new AdException(AdException.INTERNAL_ERROR, "Test"));
 
-        assertFalse(bannerView.isPrimaryAdServerRequestInProgress());
+        assertEquals(BannerLoadState.LOADING, bannerView.getLoadState());
         verify(spyEventListener, times(1)).onSdkWin(any());
     }
 
@@ -347,12 +352,82 @@ public class BannerViewTest {
     }
     //endregion ================= BannerEventListener test
 
-    private void changePrimaryAdServerRequestStatus(boolean isLoading) {
-        try {
-            WhiteBox.field(BannerView.class, "isPrimaryAdServerRequestInProgress").set(bannerView, isLoading);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
+    //region ==================== Load-cycle re-entrancy
+
+    /**
+     * A cycle waiting on Prebid Server must not accept another load. The refresh timer makes this reachable
+     * in normal operation, and a second cycle clears the Nativo bid the first one is still going to use.
+     */
+    @Test
+    public void loadAdWhilePrebidRequestInFlight_isRefused() {
+        bannerView.loadAd();
+        assertEquals(BannerLoadState.LOADING, bannerView.getLoadState());
+
+        bannerView.loadAd();
+
+        verify(mockBidLoader, times(1)).load();
+        assertEquals(BannerLoadState.LOADING, bannerView.getLoadState());
+    }
+
+    /** Exactly the settled states may start a cycle; LOADING and DESTROYED must refuse. */
+    @Test
+    public void loadAd_isAllowedFromSettledStatesAndRefusedOtherwise() {
+        for (BannerLoadState from : BannerLoadState.values()) {
+            reset(mockBidLoader);
+            bannerView.setLoadStateForTest(from);
+
+            bannerView.loadAd();
+
+            if (from.canStartLoad()) {
+                verify(mockBidLoader, times(1)).load();
+            } else {
+                verify(mockBidLoader, never()).load();
+                assertEquals("should not have left " + from, from, bannerView.getLoadState());
+            }
         }
+    }
+
+    @Test
+    public void canStartLoad_isTrueOnlyForSettledStates() {
+        assertTrue(BannerLoadState.IDLE.canStartLoad());
+        assertTrue(BannerLoadState.SHOWING.canStartLoad());
+        assertTrue(BannerLoadState.FAILED.canStartLoad());
+        assertFalse(BannerLoadState.LOADING.canStartLoad());
+        assertFalse(BannerLoadState.DESTROYED.canStartLoad());
+    }
+
+    @Test
+    public void loadAdAfterDestroy_isRefused() {
+        bannerView.destroy();
+        reset(mockBidLoader);
+
+        bannerView.loadAd();
+
+        verify(mockBidLoader, never()).load();
+        assertEquals(BannerLoadState.DESTROYED, bannerView.getLoadState());
+    }
+
+    /** destroy() is terminal: a callback already queued must not resurrect the view. */
+    @Test
+    public void transitionAfterDestroy_isIgnored() {
+        bannerView.destroy();
+
+        bannerView.setLoadStateForTest(BannerLoadState.DESTROYED);
+        getDisplayViewListener().onAdLoaded();
+
+        assertEquals(BannerLoadState.DESTROYED, bannerView.getLoadState());
+    }
+
+    //endregion ==================== Load-cycle re-entrancy
+
+    /**
+     * Drives {@link BannerLoadState} directly. {@code isPrimaryAdServerRequestInProgress()} is derived from
+     * it, so setting the state is the way to control what that reports.
+     */
+    private void changePrimaryAdServerRequestStatus(boolean isLoading) {
+        bannerView.setLoadStateForTest(
+                isLoading ? BannerLoadState.LOADING : BannerLoadState.IDLE
+        );
     }
 
     @Test
