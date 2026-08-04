@@ -1,6 +1,6 @@
 # Migrating from Prebid Mobile Android to Life360 Ads SDK Android
 
-The Life360 Ads SDK is a fork of [Prebid Mobile Android](https://github.com/prebid/prebid-mobile-android) **v3.3.1**. It keeps the Prebid Mobile public API surface intact and adds Nativo as a competing demand source. For the vast majority of integrations **migration is mechanical**: swap the dependency, relocate the package in your imports, and rebuild. Every Prebid Mobile type (`PrebidMobile`, `TargetingParams`, `BannerView`, `InterstitialAdUnit`, `GamBannerEventHandler`, …) keeps its original simple name and sub-package structure — only the top-level package prefix changes.
+The Life360 Ads SDK is a fork of [Prebid Mobile Android](https://github.com/prebid/prebid-mobile-android). It keeps the Prebid Mobile public API surface intact and adds Nativo as a competing demand source. For the vast majority of integrations **migration is mechanical**: swap the dependency, relocate the package in your imports, and rebuild. Every Prebid Mobile type (`PrebidMobile`, `TargetingParams`, `BannerView`, `InterstitialAdUnit`, `GamBannerEventHandler`, …) keeps its original simple name and sub-package structure — only the top-level package prefix changes.
 
 ---
 
