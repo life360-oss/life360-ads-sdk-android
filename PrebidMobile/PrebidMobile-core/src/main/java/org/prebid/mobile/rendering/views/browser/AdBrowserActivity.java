@@ -62,6 +62,7 @@ public final class AdBrowserActivity extends Activity
     private boolean shouldFireEvents;
     private int broadcastId;
     private String url;
+    private boolean closeEventSent;
 
     //jira/browse/MOBILE-1222 - Enable physical BACK button of the device in the in-app browser in Android
     @Override
@@ -76,6 +77,34 @@ public final class AdBrowserActivity extends Activity
             finish();
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    /**
+     * Emits {@link IntentActions#ACTION_BROWSER_CLOSE} on every exit path rather than only when the
+     * toolbar close button is used. The back key and back gesture reach {@code finish()} directly
+     * (see {@link #onKeyDown} and {@link #onBackPressed}), as does a deep link handoff (see
+     * {@link #onUrlHandleSuccess}), and none of those reported the close. Listeners waiting for the
+     * click-through to end were therefore never told, leaving anything that tears down on that
+     * event in place for the rest of the ad's life.
+     */
+    @Override
+    public void finish() {
+        sendBrowserCloseEvent();
+        super.finish();
+    }
+
+    /**
+     * Sends the browser close event at most once per activity instance. Exit paths can overlap: on
+     * a video ad, back reaches {@code finish()} twice, once from {@link #onKeyDown} and again from
+     * {@link #onBackPressed} delegating to {@code super}.
+     */
+    private void sendBrowserCloseEvent() {
+        if (closeEventSent) {
+            return;
+        }
+
+        closeEventSent = true;
+        sendLocalBroadcast(IntentActions.ACTION_BROWSER_CLOSE);
     }
 
     @Override
@@ -166,6 +195,13 @@ public final class AdBrowserActivity extends Activity
         initBrowserControls();
 
         RelativeLayout contentLayout = new RelativeLayout(this);
+        // Inset the content by the system bars. The activity theme is
+        // Theme.Translucent.NoTitleBar, so on hosts targeting API 35+ (where edge-to-edge is
+        // enforced) the window extends behind the status and navigation bars: the browser
+        // controls draw under the status bar and become partly untappable, and page content
+        // runs under the navigation bar. Below API 35 the window is already laid out inside the
+        // system bars, so the insets are 0 and this is a no-op.
+        contentLayout.setFitsSystemWindows(true);
         RelativeLayout.LayoutParams webViewLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT,
                 LayoutParams.MATCH_PARENT
         );
@@ -268,8 +304,8 @@ public final class AdBrowserActivity extends Activity
 
             @Override
             public void closeBrowser() {
+                // finish() emits ACTION_BROWSER_CLOSE for every exit path.
                 finish();
-                sendLocalBroadcast(IntentActions.ACTION_BROWSER_CLOSE);
             }
 
             @Override
