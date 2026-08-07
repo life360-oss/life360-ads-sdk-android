@@ -1,6 +1,5 @@
 # Life360 Ads SDK (Android)
-
-The  Life360 Ads SDK is an extension of the open-source [Prebid Mobile Android](https://github.com/prebid/prebid-mobile-android) project. It adds Nativo as a competing demand source alongside Prebid, with the winning bid sent to Google Ad Manager (GAM) for final decisioning. For base Prebid Mobile concepts and API documentation, refer to the [official Prebid Mobile documentation](https://docs.prebid.org/prebid-mobile/pbm-api/android/code-integration-android.html).
+The Life360 Ads SDK is a mobile ads framework used to inject demand from Nativo, Prebid and GAM. It can be used as a stand-alone integration, or it can be paired with Prebid Server and/or GAM, as needed.
 
 ## Features
 
