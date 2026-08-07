@@ -214,10 +214,6 @@ public class PrebidWebViewBase extends FrameLayout implements PreloadManager.Pre
             fadeInAnimation = AnimationUtils.loadAnimation(getContext(), android.R.anim.fade_in);
         }
 
-        if (webViewBase.isMRAID() && webViewBase.getMRAIDInterface() != null) {
-            webViewBase.getMRAIDInterface().getJsExecutor().executeOnViewableChange(true);
-        }
-
         webViewBase.startAnimation(fadeInAnimation);
         webViewBase.setVisibility(View.VISIBLE);
 
