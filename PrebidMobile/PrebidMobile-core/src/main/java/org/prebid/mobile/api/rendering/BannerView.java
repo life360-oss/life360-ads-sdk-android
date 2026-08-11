@@ -274,7 +274,7 @@ public class BannerView extends FrameLayout {
     //endregion ==================== Listener implementation
 
     /**
-     * Instantiates an BannerView with the ad details as an attribute.
+     * Instantiates a BannerView with the ad details as an attribute.
      *
      * @param attrs includes:
      *              <p>
@@ -295,7 +295,7 @@ public class BannerView extends FrameLayout {
     }
 
     /**
-     * Instantiates an BannerView for the given configId and adSize.
+     * Instantiates a BannerView for the given configId and adSize.
      */
     public BannerView(
         Context context,
@@ -311,7 +311,7 @@ public class BannerView extends FrameLayout {
     }
 
     /**
-     * Instantiates an BannerView for GAM prebid integration.
+     * Instantiates a BannerView for GAM prebid integration.
      */
     public BannerView(
         Context context,
