@@ -279,8 +279,8 @@ setupGPG
 # PrebidMobile → Life360AdsSDK rename used by buildPrebidMobile.sh for all
 # output artifact filenames (AAR, JAR, sources, javadoc).
 # POM templates are still looked up by Gradle project name (PrebidMobile-*-pom.xml).
-modules=("PrebidMobile-core" "PrebidMobile" "PrebidMobile-gamEventHandlers" "PrebidMobile-admobAdapters" "PrebidMobile-maxAdapters")
-extensions=("aar" "jar" "jar" "jar" "jar")
+modules=("PrebidMobile-core" "PrebidMobile" "PrebidMobile-gamEventHandlers" "PrebidMobile-admobAdapters" "PrebidMobile-maxAdapters" "Life360AdsSDK-appHarbrAdapter")
+extensions=("aar" "jar" "jar" "jar" "jar" "jar")
 
 for n in ${!modules[@]}; do
   echo -e "\n"

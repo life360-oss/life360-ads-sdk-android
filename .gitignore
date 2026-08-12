@@ -32,6 +32,7 @@ scripts/Maven/*
 !scripts/Maven/deployPrebidMobile.sh
 !scripts/Maven/PrebidMobile-core-pom.xml
 !scripts/Maven/PrebidMobile-pom.xml
+!scripts/Maven/Life360AdsSDK-appHarbrAdapter-pom.xml
 
 # Gradle files
 .gradle/

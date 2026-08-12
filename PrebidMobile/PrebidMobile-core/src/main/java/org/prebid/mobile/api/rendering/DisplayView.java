@@ -29,11 +29,12 @@ import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
 import org.prebid.mobile.rendering.networking.WinNotifier;
+import org.prebid.mobile.rendering.views.webview.WebViewBase;
 
 /**
  * Internal view for {@link BannerView}.
  */
-public class DisplayView extends FrameLayout {
+public class DisplayView extends FrameLayout implements WebViewProvider {
     private View adView;
     private AdUnitConfiguration adUnitConfiguration;
     private DisplayViewListener displayViewListener;
@@ -92,6 +93,15 @@ public class DisplayView extends FrameLayout {
         if (adView != null && adView instanceof PrebidDestroyable) {
             ((PrebidDestroyable) adView).destroy();
         }
+    }
+
+    @Nullable
+    @Override
+    public WebViewBase getRenderedWebView() {
+        if (adView instanceof WebViewProvider) {
+            return ((WebViewProvider) adView).getRenderedWebView();
+        }
+        return null;
     }
 
     @Nullable
