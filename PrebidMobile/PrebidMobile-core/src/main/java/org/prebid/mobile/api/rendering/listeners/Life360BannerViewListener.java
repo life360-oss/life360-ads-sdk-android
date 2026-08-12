@@ -20,16 +20,16 @@ import org.prebid.mobile.api.rendering.BannerView;
 
 /**
  * Opt-in extension of {@link BannerViewListener}. A publisher implements this — rather than plain
- * BannerViewListener — to receive {@link #onNativoAdLoaded} and enable Nativo's full-container
+ * BannerViewListener — to receive {@link #onLife360AdLoaded} and enable Life360's full-container
  * render path.
  */
-public interface NativoBannerViewListener extends BannerViewListener {
+public interface Life360BannerViewListener extends BannerViewListener {
     /**
      * Called instead of {@link BannerViewListener#onAdLoaded} when an ad is served and rendered by
-     * Nativo. The Nativo renderer attempts to break out of its fixed ad size and serve into the
+     * Life360. The Life360 renderer attempts to break out of its fixed ad size and serve into the
      * full size of its container.
      *
      * @param bannerView view of the corresponding event.
      */
-    void onNativoAdLoaded(BannerView bannerView);
+    void onLife360AdLoaded(BannerView bannerView);
 }

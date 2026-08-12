@@ -86,8 +86,8 @@ The fork does **not rename or remove** any existing Prebid Mobile public type or
 There is a new flag to allow sharing a user's location with Nativo, alongside the existing Prebid geo-sharing control:
 
 ```kotlin
-// Share location with Nativo:
-PrebidMobile.setShareGeoLocationWithNativo(true)
+// Share location with Life360:
+PrebidMobile.setShareGeoLocationWithLife360(true)
 
 // Continue to use this for sharing with Prebid Server & partners:
 PrebidMobile.setShareGeoLocation(true)

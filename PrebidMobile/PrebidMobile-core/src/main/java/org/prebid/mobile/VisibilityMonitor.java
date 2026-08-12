@@ -11,7 +11,7 @@ import android.webkit.WebView;
 
 import androidx.annotation.Nullable;
 
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 
 import org.jetbrains.annotations.NotNull;
 import org.prebid.mobile.addendum.AdViewUtils;
@@ -80,7 +80,7 @@ public class VisibilityMonitor {
 
         private WeakReference<View> containerViewReference;
         @Nullable
-        private NativoCreativeVisibilityTracker visibilityTracker;
+        private Life360CreativeVisibilityTracker visibilityTracker;
 
         public VisibilityTimer() {
             super(LONGEVITY, INTERVAL);
@@ -130,7 +130,7 @@ public class VisibilityMonitor {
                 visibilityTracker.stopVisibilityCheck();
             }
 
-            visibilityTracker = new NativoCreativeVisibilityTracker(webView, new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION));
+            visibilityTracker = new Life360CreativeVisibilityTracker(webView, new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION));
             visibilityTracker.setVisibilityTrackerListener(result -> {
                 boolean visible = result.isVisible();
                 if (visible) {

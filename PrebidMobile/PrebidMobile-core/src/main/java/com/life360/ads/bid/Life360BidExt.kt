@@ -3,7 +3,7 @@ package com.life360.ads.bid
 import org.json.JSONObject
 import org.prebid.mobile.rendering.bidding.data.bid.Bid
 
-object NativoBidExt {
+object Life360BidExt {
     private const val EXT_KEY = "ext"
     private const val NATIVO_KEY = "nativo"
     private const val OWNED_OPERATED_KEY = "oo"
@@ -30,7 +30,7 @@ object NativoBidExt {
     }
     
     @JvmStatic
-    fun getNativoAdType(bid: Bid?): NativoAdType? {
+    fun getLife360AdType(bid: Bid?): Life360AdType? {
         if (bid == null) {
             return null
         }
@@ -40,7 +40,7 @@ object NativoBidExt {
             val ext = root.optJSONObject(EXT_KEY) ?: return null
             val nativo = ext.optJSONObject(NATIVO_KEY) ?: return null
             when (val raw = nativo.opt(AD_TYPE_KEY)) {
-                is Number -> NativoAdType.fromInt(raw.toInt())
+                is Number -> Life360AdType.fromInt(raw.toInt())
                 else -> return null
             }
         } catch (_: Exception) {

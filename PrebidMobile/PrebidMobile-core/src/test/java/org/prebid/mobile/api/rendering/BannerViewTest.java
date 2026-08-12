@@ -363,7 +363,7 @@ public class BannerViewTest {
 
     @Test
     public void loadAdInServerlessMode_SkipBidLoaderRequestAdWithBidAndScheduleRefresh() throws Exception {
-        // Serverless mode: no Prebid Server. The (real) Nativo request fails synchronously because no
+        // Serverless mode: no Prebid Server. The (real) Life360 request fails synchronously because no
         // context is set, so loadAd() falls through to the serverless branch. The mode is captured when the
         // view is built, so it has to be set before constructing rather than before loading.
         Life360Ads.setPrebidServerEnabled(false);

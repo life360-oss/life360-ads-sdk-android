@@ -23,8 +23,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.VisibleForTesting;
 
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
-import com.life360.ads.exposure.NativoFriendlyObstructionManager;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360FriendlyObstructionManager;
 
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.data.AdFormat;
@@ -55,7 +55,7 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
 
     private PrebidWebViewBase twoPartNewWebViewBase;
 
-    private final NativoFriendlyObstructionManager friendlyObstructionManager = new NativoFriendlyObstructionManager();
+    private final Life360FriendlyObstructionManager friendlyObstructionManager = new Life360FriendlyObstructionManager();
 
     private boolean isEndCard = false;
     private boolean resolved;
@@ -184,7 +184,7 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
         if (getCreativeView() == null) {
             return;
         }
-        NativoFriendlyObstructionManager.Reconciliation reconciliation =
+        Life360FriendlyObstructionManager.Reconciliation reconciliation =
                 friendlyObstructionManager.reconcile(getCreativeView().getWebView());
         for (View view : reconciliation.getAdded()) {
             addOmFriendlyObstruction(new InternalFriendlyObstruction(
@@ -207,7 +207,7 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
     @Override
     public void startViewabilityTracker() {
         VisibilityTrackerOption visibilityTrackerOption = new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION);
-        creativeVisibilityTracker = new NativoCreativeVisibilityTracker(getCreativeView().getWebView(),
+        creativeVisibilityTracker = new Life360CreativeVisibilityTracker(getCreativeView().getWebView(),
                 visibilityTrackerOption,
                 ((PrebidWebViewBase) getCreativeView()).getWebView().isMRAID()
         );

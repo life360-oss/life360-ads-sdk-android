@@ -231,7 +231,7 @@ public class SdkInitializerTest {
     @Test
     public void init_serverlessThenPrebidServerWithBadStatus_warnsButStaysInitialized()
             throws InterruptedException {
-        // A bad status must not tear the SDK down: the Nativo and ad-server legs still work.
+        // A bad status must not tear the SDK down: the Life360 and ad-server legs still work.
         Life360Ads.setPrebidServerEnabled(false);
         SdkInitializer.init(context, null);
         advanceBackgroundTasks();

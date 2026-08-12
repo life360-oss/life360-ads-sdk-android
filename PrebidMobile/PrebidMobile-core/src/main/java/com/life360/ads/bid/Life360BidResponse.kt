@@ -1,29 +1,29 @@
 package com.life360.ads.bid
 
-import com.life360.ads.renderer.NativoRenderer
+import com.life360.ads.renderer.Life360Renderer
 import org.prebid.mobile.rendering.bidding.data.bid.Bid
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse
 import org.prebid.mobile.rendering.bidding.data.bid.Seatbid
 import org.prebid.mobile.configuration.AdUnitConfiguration
 import java.util.Locale
 
-class NativoBidResponse(
+class Life360BidResponse(
     json: String,
     adUnitConfiguration: AdUnitConfiguration
 ) : BidResponse(json, adUnitConfiguration) {
 
-    private var nativoWinningBid: Bid? = null
+    private var life360WinningBid: Bid? = null
 
     init {
-        nativoWinningBid = selectWinningBid()
-        nativoWinningBid?.let { bid ->
+        life360WinningBid = selectWinningBid()
+        life360WinningBid?.let { bid ->
             applyTargeting(bid)
             applyRendererMeta(bid)
         }
     }
 
     override fun getWinningBid(): Bid? {
-        return nativoWinningBid ?: super.getWinningBid()
+        return life360WinningBid ?: super.getWinningBid()
     }
 
     private fun selectWinningBid(): Bid? {
@@ -59,7 +59,7 @@ class NativoBidResponse(
 
     private fun applyRendererMeta(bid: Bid) {
         val meta = bid.prebid.meta
-        meta[KEY_RENDERER_NAME] = NativoRenderer.NAME
-        meta[KEY_RENDERER_VERSION] = NativoRenderer.VERSION
+        meta[KEY_RENDERER_NAME] = Life360Renderer.NAME
+        meta[KEY_RENDERER_VERSION] = Life360Renderer.VERSION
     }
 }

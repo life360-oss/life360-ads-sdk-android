@@ -1,6 +1,6 @@
 package com.life360.ads.bid
 
-enum class NativoAdType(val type: Int) {
+enum class Life360AdType(val type: Int) {
     ARTICLE(0),
     DISPLAY(2),
     CTP_VIDEO(3),
@@ -10,7 +10,7 @@ enum class NativoAdType(val type: Int) {
     STORY(7);
 
     companion object {
-        fun fromInt(value: Int): NativoAdType? {
+        fun fromInt(value: Int): Life360AdType? {
             return entries.firstOrNull { it.type == value }
         }
     }

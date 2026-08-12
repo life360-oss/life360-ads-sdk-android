@@ -8,7 +8,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.life360.ads.Life360Ads;
-import com.life360.ads.renderer.NativoRenderer;
+import com.life360.ads.renderer.Life360Renderer;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.LogUtil.PrebidLogger;
 import org.prebid.mobile.PrebidMobile;
@@ -69,8 +69,8 @@ public class SdkInitializer {
         try {
             PrebidMobile.registerPluginRenderer(new PrebidRenderer());
 
-            // Register Nativo rendering plugin as a default option
-            PrebidMobile.registerPluginRenderer(new NativoRenderer());
+            // Register Life360 rendering plugin as a default option
+            PrebidMobile.registerPluginRenderer(new Life360Renderer());
 
             AppInfoManager.init(applicationContext);
 

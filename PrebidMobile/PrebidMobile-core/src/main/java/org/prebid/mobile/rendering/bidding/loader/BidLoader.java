@@ -110,7 +110,7 @@ public class BidLoader {
             return;
         }
 
-        // In serverless mode there is no Prebid Server to load from; re-run the Nativo + event handler
+        // In serverless mode there is no Prebid Server to load from; re-run the Life360 + event handler
         // path via the registered listener instead. Read off the ad unit, not the global default, so a
         // Prebid Server added after this ad unit was created does not redirect its refresh.
         if (!adConfiguration.isPrebidServerEnabled()) {
@@ -267,7 +267,7 @@ public class BidLoader {
 
     /**
      * Serverless mode has no Prebid Server to reload from, so the refresh timer re-runs the full
-     * Nativo + event handler flow through this listener instead of calling {@link #load()}.
+     * Life360 + event handler flow through this listener instead of calling {@link #load()}.
      */
     public interface ServerlessRefreshListener {
 

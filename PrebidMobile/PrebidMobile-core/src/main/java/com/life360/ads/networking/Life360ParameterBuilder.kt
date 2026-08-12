@@ -4,7 +4,7 @@ import org.prebid.mobile.configuration.AdUnitConfiguration
 import org.prebid.mobile.rendering.networking.parameters.AdRequestInput
 import org.prebid.mobile.rendering.networking.parameters.ParameterBuilder
 
-class NativoParameterBuilder(
+class Life360ParameterBuilder(
     private val adConfiguration: AdUnitConfiguration
 ) : ParameterBuilder() {
 

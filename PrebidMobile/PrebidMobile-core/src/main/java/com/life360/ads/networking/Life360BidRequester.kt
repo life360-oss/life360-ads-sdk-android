@@ -20,12 +20,12 @@ import org.prebid.mobile.rendering.networking.urlBuilder.URLBuilder
 import org.prebid.mobile.rendering.sdk.PrebidContextHolder
 import org.prebid.mobile.rendering.utils.helpers.ExternalViewerUtils
 import org.prebid.mobile.rendering.utils.helpers.AppInfoManager
-import com.life360.ads.bid.NativoBidExt
-import com.life360.ads.bid.NativoBidResponse
+import com.life360.ads.bid.Life360BidExt
+import com.life360.ads.bid.Life360BidResponse
 import org.prebid.mobile.api.exceptions.NoBidException
 import java.util.concurrent.atomic.AtomicBoolean
 
-class NativoBidRequester : ExternalBidRequester {
+class Life360BidRequester : ExternalBidRequester {
 
     private val requestInProgress = AtomicBoolean(false)
     private var networkTask: BaseNetworkTask? = null
@@ -35,7 +35,7 @@ class NativoBidRequester : ExternalBidRequester {
         listener: ExternalBidRequesterListener
     ) {
         if (!requestInProgress.compareAndSet(false, true)) {
-            listener.onComplete(null, AdException(AdException.INTERNAL_ERROR, "Nativo request already in progress."))
+            listener.onComplete(null, AdException(AdException.INTERNAL_ERROR, "Life360 request already in progress."))
             return
         }
 
@@ -47,14 +47,14 @@ class NativoBidRequester : ExternalBidRequester {
 
         val builders = ArrayList<ParameterBuilder>()
         builders.add(BasicParameterBuilder(adUnitConfiguration, context.resources, ExternalViewerUtils.isBrowserActivityCallable(context)))
-        builders.add(NativoGeoLocationParameterBuilder())
+        builders.add(Life360GeoLocationParameterBuilder())
         builders.add(AppInfoParameterBuilder(adUnitConfiguration))
         builders.add(DeviceInfoParameterBuilder(adUnitConfiguration))
         builders.add(NetworkParameterBuilder())
         builders.add(UserConsentParameterBuilder())
-        builders.add(NativoParameterBuilder(adUnitConfiguration))
+        builders.add(Life360ParameterBuilder(adUnitConfiguration))
 
-        val urlBuilder = URLBuilder(NativoPathBuilder(), builders, AdRequestInput())
+        val urlBuilder = URLBuilder(Life360PathBuilder(), builders, AdRequestInput())
         val urlComponents = urlBuilder.buildUrl()
 
         val params = BaseNetworkTask.GetUrlParams().apply {
@@ -81,7 +81,7 @@ class NativoBidRequester : ExternalBidRequester {
                     return
                 }
 
-                val bidResponse = NativoBidResponse(body, adUnitConfiguration)
+                val bidResponse = Life360BidResponse(body, adUnitConfiguration)
                 if (bidResponse.hasParseError()) {
                     listener.onComplete(null, AdException(AdException.INTERNAL_ERROR, bidResponse.parseError))
                 } else {
@@ -90,7 +90,7 @@ class NativoBidRequester : ExternalBidRequester {
             }
 
             override fun onError(msg: String?, responseTime: Long) {
-                finishWithError(listener, AdException(AdException.INTERNAL_ERROR, "Nativo request failed: ${msg ?: "Unknown error"}"))
+                finishWithError(listener, AdException(AdException.INTERNAL_ERROR, "Life360 request failed: ${msg ?: "Unknown error"}"))
             }
 
             override fun onErrorWithException(e: Exception?, responseTime: Long) {
@@ -100,7 +100,7 @@ class NativoBidRequester : ExternalBidRequester {
                     finishWithError(listener, e)
                     return
                 }
-                finishWithError(listener, AdException(AdException.INTERNAL_ERROR, "Nativo request failed: ${e?.message ?: "Unknown exception"}"))
+                finishWithError(listener, AdException(AdException.INTERNAL_ERROR, "Life360 request failed: ${e?.message ?: "Unknown exception"}"))
             }
         }
 
@@ -110,7 +110,7 @@ class NativoBidRequester : ExternalBidRequester {
 
     override fun shouldRenderImmediately(response: BidResponse?): Boolean {
         val bid = response?.winningBid ?: return false
-        return NativoBidExt.isOwnedOperated(bid)
+        return Life360BidExt.isOwnedOperated(bid)
     }
 
     private fun finishWithError(listener: ExternalBidRequesterListener, exception: AdException) {
@@ -121,7 +121,7 @@ class NativoBidRequester : ExternalBidRequester {
     }
 
     companion object {
-        private const val TAG = "NativoBidRequester"
+        private const val TAG = "Life360BidRequester"
         private const val REQUEST_NAME = "nativo_bid_request"
         private const val HTTP_NO_CONTENT = 204
     }

@@ -16,14 +16,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.LooperMode
 
 /**
- * Pins the contract NativoBidRequester relies on: BaseNetworkTask must surface a 204 as a
- * [NoBidException] (and nothing else as one). NativoBidRequester dispatches no-bids purely by this
+ * Pins the contract Life360BidRequester relies on: BaseNetworkTask must surface a 204 as a
+ * [NoBidException] (and nothing else as one). Life360BidRequester dispatches no-bids purely by this
  * type, so if a 204 stopped throwing NoBidException the publisher would regress to a generic
  * internal error instead of a clean no-bid result.
  */
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.LEGACY)
-class NativoBidRequesterTest {
+class Life360BidRequesterTest {
 
     private lateinit var server: MockWebServer
 

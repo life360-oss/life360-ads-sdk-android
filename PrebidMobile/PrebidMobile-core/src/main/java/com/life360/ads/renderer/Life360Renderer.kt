@@ -10,9 +10,9 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import android.widget.ImageView
-import com.life360.ads.bid.NativoAdType
-import com.life360.ads.bid.NativoBidExt
-import com.life360.ads.utils.NativoUtils
+import com.life360.ads.bid.Life360AdType
+import com.life360.ads.bid.Life360BidExt
+import com.life360.ads.utils.Life360Utils
 import org.json.JSONObject
 import org.prebid.mobile.LogUtil
 import org.prebid.mobile.api.data.AdFormat
@@ -29,10 +29,11 @@ import org.prebid.mobile.rendering.bidding.interfaces.InterstitialControllerList
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener
 
-class NativoRenderer : PrebidMobilePluginRenderer {
+class Life360Renderer : PrebidMobilePluginRenderer {
 
     companion object Companion {
-        private const val TAG = "NativoRenderer"
+        private const val TAG = "Life360Renderer"
+        // Note: Keeping the name "NativoRenderer" for backward compatibility with Prebid Server's Nativo module
         const val NAME = "NativoRenderer"
         const val VERSION = "1.0.0"
     }
@@ -56,7 +57,7 @@ class NativoRenderer : PrebidMobilePluginRenderer {
             override fun onAdLoaded() = displayViewListener.onAdLoaded()
             override fun onAdClicked() {
                 displayViewRef?.let { displayView ->
-                    val snapshot = NativoUtils.captureViewSnapshot(displayView)
+                    val snapshot = Life360Utils.captureViewSnapshot(displayView)
                     snapshot.tag = TAG
                     snapshot.layoutParams = FrameLayout.LayoutParams(
                         MATCH_PARENT,
@@ -79,8 +80,8 @@ class NativoRenderer : PrebidMobilePluginRenderer {
             }
             override fun onAdDisplayed() {
                 displayViewRef?.let { displayView ->
-                    if (isNativoAd(bidResponse)) {
-                        renderNativoAd(displayView, bidResponse)
+                    if (isLife360Ad(bidResponse)) {
+                        renderLife360Ad(displayView, bidResponse)
                     }
                     displayViewListener.onAdDisplayed()
                 }
@@ -96,12 +97,12 @@ class NativoRenderer : PrebidMobilePluginRenderer {
             bidResponse
         )
 
-        val adType = bidResponse.winningBid?.let { NativoBidExt.getNativoAdType(it) }
-        if (adType == NativoAdType.STORY || adType == NativoAdType.STP_VIDEO || adType == NativoAdType.CTP_VIDEO) {
+        val adType = bidResponse.winningBid?.let { Life360BidExt.getLife360AdType(it) }
+        if (adType == Life360AdType.STORY || adType == Life360AdType.STP_VIDEO || adType == Life360AdType.CTP_VIDEO) {
             displayViewRef.getInterstitialDisplayProperties().dialogBackgroundColor = Color.BLACK
         }
 
-        // Set default height to WRAP_CONTENT for non-Nativo ads
+        // Set default height to WRAP_CONTENT for non-Life360 ads
         displayViewRef.layoutParams = FrameLayout.LayoutParams(
             MATCH_PARENT,
             WRAP_CONTENT
@@ -138,17 +139,17 @@ class NativoRenderer : PrebidMobilePluginRenderer {
     }
 
     override fun didInjectView(view: View, inBannerView: View, bidResponse: BidResponse) {
-        // Set wrap content as the default layout. Will be overridden later if is a Nativo ad.
+        // Set wrap content as the default layout. Will be overridden later if is a Life360 ad.
         view.layoutParams = FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER)
     }
 
     // Private methods
 
-    private fun isNativoAd(bidResponse: BidResponse): Boolean {
+    private fun isLife360Ad(bidResponse: BidResponse): Boolean {
         bidResponse.winningBid?.let {
-            val nativoAdType = NativoBidExt.getNativoAdType(it)
-            if (nativoAdType != null) {
-                return nativoAdType != NativoAdType.STANDARD_DISPLAY
+            val life360AdType = Life360BidExt.getLife360AdType(it)
+            if (life360AdType != null) {
+                return life360AdType != Life360AdType.STANDARD_DISPLAY
             } else {
                 // Fallback
                 val adm = bidResponse.winningBid?.adm ?: ""
@@ -162,14 +163,14 @@ class NativoRenderer : PrebidMobilePluginRenderer {
      * Expand the article full width, and attempt to expand height to parent container,
      * while also ensuring at least a minimum height of the requested bid.
      */
-    private fun renderNativoAd(displayView: PrebidDisplayView, bidResponse: BidResponse) {
+    private fun renderLife360Ad(displayView: PrebidDisplayView, bidResponse: BidResponse) {
         // Wait for attachment and layout before rendering
-        NativoUtils.runOnLaidOut(displayView) {
+        Life360Utils.runOnLaidOut(displayView) {
             val inBannerView = generateSequence(displayView.parent) { it.parent }
                 .filterIsInstance<BannerView>()
                 .firstOrNull()
             if (inBannerView == null) {
-                LogUtil.error(TAG, "Nativo renderer expected a parent BannerView, but none was found.")
+                LogUtil.error(TAG, "Life360 renderer expected a parent BannerView, but none was found.")
                 return@runOnLaidOut
             }
             val parentView = (inBannerView.parent as? View) ?: inBannerView
@@ -239,7 +240,7 @@ class NativoRenderer : PrebidMobilePluginRenderer {
     private fun expandChildViews(displayView: ViewGroup, minHeightPx: Int, useMatchParent: Boolean) {
         val firstChild = displayView.getChildAt(0)
         if (firstChild == null) {
-            LogUtil.error(TAG, "Nativo renderer expected a child view on PrebidDisplayView, but none was found.")
+            LogUtil.error(TAG, "Life360 renderer expected a child view on PrebidDisplayView, but none was found.")
             return
         }
 

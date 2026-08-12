@@ -4,7 +4,7 @@ import com.life360.ads.Life360Ads
 import org.prebid.mobile.PrebidMobile
 import org.prebid.mobile.rendering.networking.parameters.GeoLocationParameterBuilder
 
-class NativoGeoLocationParameterBuilder : GeoLocationParameterBuilder() {
+class Life360GeoLocationParameterBuilder : GeoLocationParameterBuilder() {
     override fun isEnabled(): Boolean =
-        Life360Ads.isShareGeoLocationWithNativo || PrebidMobile.isShareGeoLocation()
+        Life360Ads.isShareGeoLocationWithLife360 || PrebidMobile.isShareGeoLocation()
 }
