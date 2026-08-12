@@ -33,7 +33,7 @@ import org.prebid.mobile.api.data.VideoPlacementType;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.api.rendering.listeners.BannerVideoListener;
 import org.prebid.mobile.api.rendering.listeners.BannerViewListener;
-import org.prebid.mobile.api.rendering.listeners.NativoBannerViewListener;
+import org.prebid.mobile.api.rendering.listeners.Life360BannerViewListener;
 import org.prebid.mobile.api.rendering.pluginrenderer.PluginEventListener;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRegister;
 import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRenderer;
@@ -107,16 +107,15 @@ public class BannerView extends FrameLayout {
             if (bannerViewListener == null) {
                 return;
             }
-            // Only route to the Nativo render path when the publisher opted in by implementing
-            // NativoBannerViewListener. instanceof is R8-safe, unlike reflecting on an override.
-            if (bannerViewListener instanceof NativoBannerViewListener && nativoDidRenderBid(winningBid)) {
-                ((NativoBannerViewListener) bannerViewListener).onNativoAdLoaded(BannerView.this);
+            // Only route to the Nativo render path when the publisher opted in
+            if (bannerViewListener instanceof Life360BannerViewListener && life360DidRenderBid(winningBid)) {
+                ((Life360BannerViewListener) bannerViewListener).onLife360AdLoaded(BannerView.this);
                 return;
             }
             bannerViewListener.onAdLoaded(BannerView.this);
         }
 
-        private boolean nativoDidRenderBid(BidResponse bidResponse) {
+        private boolean life360DidRenderBid(BidResponse bidResponse) {
             if (bidResponse instanceof NativoBidResponse) {
                 NativoAdType adType = NativoBidExt.getNativoAdType(bidResponse.getWinningBid());
                 // Nativo rendering not used for type STANDARD_DISPLAY
