@@ -9,109 +9,109 @@ import org.junit.Test
 import org.prebid.mobile.rendering.bidding.data.bid.Bid
 
 /**
- * Covers the JSON-walking branches in [NativoBidExt]: null/missing nodes, the Boolean/Number/else
+ * Covers the JSON-walking branches in [Life360BidExt]: null/missing nodes, the Boolean/Number/else
  * type handling for the `oo` flag, and malformed input. These determine ad routing, so the
  * fall-through-to-safe-default behavior must hold for every shape of input.
  */
-class NativoBidExtTest {
+class Life360BidExtTest {
 
     // region isOwnedOperated
 
     @Test
     fun isOwnedOperated_nullBid_returnsFalse() {
-        assertFalse(NativoBidExt.isOwnedOperated(null))
+        assertFalse(Life360BidExt.isOwnedOperated(null))
     }
 
     @Test
     fun isOwnedOperated_booleanTrue_returnsTrue() {
-        assertTrue(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", true))))
+        assertTrue(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", true))))
     }
 
     @Test
     fun isOwnedOperated_booleanFalse_returnsFalse() {
-        assertFalse(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", false))))
+        assertFalse(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", false))))
     }
 
     @Test
     fun isOwnedOperated_numberOne_returnsTrue() {
-        assertTrue(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", 1))))
+        assertTrue(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", 1))))
     }
 
     @Test
     fun isOwnedOperated_numberZero_returnsFalse() {
-        assertFalse(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", 0))))
+        assertFalse(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", 0))))
     }
 
     @Test
     fun isOwnedOperated_negativeNumber_returnsTrue() {
         // Any non-zero number is truthy per the `toInt() != 0` rule.
-        assertTrue(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", -5))))
+        assertTrue(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", -5))))
     }
 
     @Test
     fun isOwnedOperated_stringValue_returnsFalse() {
         // A non-Boolean/non-Number value hits the `else` branch.
-        assertFalse(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", "true"))))
+        assertFalse(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("oo", "true"))))
     }
 
     @Test
     fun isOwnedOperated_missingOoKey_returnsFalse() {
-        assertFalse(NativoBidExt.isOwnedOperated(bidWithNativo(JSONObject().put("other", 1))))
+        assertFalse(Life360BidExt.isOwnedOperated(bidWithNativo(JSONObject().put("other", 1))))
     }
 
     @Test
     fun isOwnedOperated_missingNativoNode_returnsFalse() {
         val bid = bidWithExt(JSONObject().put("notnativo", JSONObject()))
-        assertFalse(NativoBidExt.isOwnedOperated(bid))
+        assertFalse(Life360BidExt.isOwnedOperated(bid))
     }
 
     @Test
     fun isOwnedOperated_missingExtNode_returnsFalse() {
         val bid = Bid.fromJSONObject(JSONObject().put("id", "b1").put("price", 1.0))
-        assertFalse(NativoBidExt.isOwnedOperated(bid))
+        assertFalse(Life360BidExt.isOwnedOperated(bid))
     }
 
     @Test
     fun isOwnedOperated_bidWithNullJson_returnsFalse() {
         // fromJSONObject(null) yields a Bid whose jsonString is null -> early-return branch.
-        assertFalse(NativoBidExt.isOwnedOperated(Bid.fromJSONObject(null)))
+        assertFalse(Life360BidExt.isOwnedOperated(Bid.fromJSONObject(null)))
     }
 
     // endregion
 
-    // region getNativoAdType
+    // region getLife360AdType
 
     @Test
-    fun getNativoAdType_nullBid_returnsNull() {
-        assertNull(NativoBidExt.getNativoAdType(null))
+    fun getLife360AdType_nullBid_returnsNull() {
+        assertNull(Life360BidExt.getLife360AdType(null))
     }
 
     @Test
-    fun getNativoAdType_validInt_mapsToEnum() {
+    fun getLife360AdType_validInt_mapsToEnum() {
         assertEquals(
-            NativoAdType.DISPLAY,
-            NativoBidExt.getNativoAdType(bidWithNativo(JSONObject().put("nativoAdType", 2)))
+            Life360AdType.DISPLAY,
+            Life360BidExt.getLife360AdType(bidWithNativo(JSONObject().put("nativoAdType", 2)))
         )
     }
 
     @Test
-    fun getNativoAdType_unknownInt_returnsNull() {
-        assertNull(NativoBidExt.getNativoAdType(bidWithNativo(JSONObject().put("nativoAdType", 99))))
+    fun getLife360AdType_unknownInt_returnsNull() {
+        assertNull(Life360BidExt.getLife360AdType(bidWithNativo(JSONObject().put("nativoAdType", 99))))
     }
 
     @Test
-    fun getNativoAdType_nonNumberValue_returnsNull() {
-        assertNull(NativoBidExt.getNativoAdType(bidWithNativo(JSONObject().put("nativoAdType", "2"))))
+    fun getLife360AdType_nonNumberValue_returnsNull() {
+        assertNull(Life360BidExt.getLife360AdType(bidWithNativo(JSONObject().put("nativoAdType", "2"))))
     }
 
     @Test
-    fun getNativoAdType_missingKey_returnsNull() {
-        assertNull(NativoBidExt.getNativoAdType(bidWithNativo(JSONObject().put("oo", true))))
+    fun getLife360AdType_missingKey_returnsNull() {
+        assertNull(Life360BidExt.getLife360AdType(bidWithNativo(JSONObject().put("oo", true))))
     }
 
     @Test
-    fun getNativoAdType_missingNativoNode_returnsNull() {
-        assertNull(NativoBidExt.getNativoAdType(bidWithExt(JSONObject())))
+    fun getLife360AdType_missingNativoNode_returnsNull() {
+        assertNull(Life360BidExt.getLife360AdType(bidWithExt(JSONObject())))
     }
 
     // endregion

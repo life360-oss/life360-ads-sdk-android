@@ -38,7 +38,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.view.View;
 
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 
 import org.junit.After;
 import org.junit.Before;
@@ -95,7 +95,7 @@ public class HTMLCreativeTest {
     @Mock
     MraidController mockMraidController;
     @Mock
-    NativoCreativeVisibilityTracker mockCreativeVisibilityTracker;
+    Life360CreativeVisibilityTracker mockCreativeVisibilityTracker;
     @Mock
     PrebidWebViewBase mockPrebidWebView;
 
@@ -268,13 +268,13 @@ public class HTMLCreativeTest {
                                                                      null, false, false);
 
         doAnswer(invocation -> {
-            NativoCreativeVisibilityTracker.VisibilityTrackerListener listener =
+            Life360CreativeVisibilityTracker.VisibilityTrackerListener listener =
                 invocation.getArgument(0);
 
             listener.onVisibilityChanged(result);
             return null;
         }).when(mockCreativeVisibilityTracker)
-          .setVisibilityTrackerListener(any(NativoCreativeVisibilityTracker.VisibilityTrackerListener.class));
+          .setVisibilityTrackerListener(any(Life360CreativeVisibilityTracker.VisibilityTrackerListener.class));
 
         htmlCreative.onVisibilityEvent(result);
 

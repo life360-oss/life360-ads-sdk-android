@@ -11,14 +11,14 @@ import android.view.ViewGroup
  * OMID auto-detects occluders by walking the view tree and counts every overlapping, non-hidden,
  * alpha>0 view as an occluder — even one whose entire subtree paints nothing over the ad (transparent
  * background, or opaque content outside the ad's frame). That erodes measured viewability for
- * Nativo/HTML ads sitting under transparent overlays or gesture-only views; registering those overlays
+ * Life360/HTML ads sitting under transparent overlays or gesture-only views; registering those overlays
  * as friendly obstructions (`FriendlyObstructionPurpose.NOT_VISIBLE`) stops OMID counting them.
  *
  * [friendlyObstructionViews] is a point-in-time snapshot. Because the OM session starts while the ad
  * may still be off-screen in a scrolling container, [reconcile] must be re-run from the viewability
  * cycle; it diffs the fresh snapshot against what is already registered and returns only the delta.
  */
-class NativoFriendlyObstructionManager {
+class Life360FriendlyObstructionManager {
 
     /** The change in registered obstructions since the previous [reconcile]. */
     data class Reconciliation(val added: List<View>, val removed: List<View>)

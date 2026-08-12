@@ -12,7 +12,7 @@ import org.prebid.mobile.rendering.sdk.SdkInitializer
  * Entry point for the Life360 Ads SDK.
  *
  * The SDK is a fork of Prebid Mobile, so most configuration still lives on `Prebid`/`Targeting`
- * because both the Prebid and Nativo ad paths share most of the request and render architecture.
+ * because both the Prebid and Life360 ad paths share most of the request and render architecture.
  */
 object Life360Ads {
 
@@ -37,16 +37,16 @@ object Life360Ads {
     var isPrebidServerEnabled: Boolean = true
 
     /**
-     * Allows the SDK to share geolocation on Nativo bid requests if permission is granted by the user.
+     * Allows the SDK to share geolocation on Life360 bid requests if permission is granted by the user.
      */
     @JvmStatic
-    var isShareGeoLocationWithNativo: Boolean = false
+    var isShareGeoLocationWithLife360: Boolean = false
 
     /**
-     * Initializes the SDK without a Prebid Server, for integrations that only use Nativo demand plus
+     * Initializes the SDK without a Prebid Server, for integrations that only use Life360 demand plus
      * their own ad-server event handler. Use this when you have no Prebid Server to point at: the
      * BannerView flow then skips the Prebid Server bid request entirely and goes straight from the
-     * Nativo request to the EventHandler request. The PBS /status check is also skipped during init.
+     * Life360 request to the EventHandler request. The PBS /status check is also skipped during init.
      *
      * @param context any context (must be not null)
      * @param listener initialization listener (can be null)

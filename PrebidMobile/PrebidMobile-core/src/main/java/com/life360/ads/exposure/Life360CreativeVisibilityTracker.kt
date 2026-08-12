@@ -12,12 +12,12 @@ import org.prebid.mobile.rendering.utils.exposure.ViewExposure
 import org.prebid.mobile.rendering.utils.exposure.ViewExposureChecker
 import org.prebid.mobile.rendering.utils.helpers.VisibilityChecker
 import org.prebid.mobile.rendering.views.webview.mraid.Views
-import com.life360.ads.utils.NativoUtils
+import com.life360.ads.utils.Life360Utils
 import com.life360.ads.utils.PausableCountDownTimer
 import java.lang.ref.WeakReference
 import java.util.Collections
 
-class NativoCreativeVisibilityTracker(
+class Life360CreativeVisibilityTracker(
     trackedView: View,
     visibilityTrackerOptionSet: Set<VisibilityTrackerOption>
 ) {
@@ -66,7 +66,7 @@ class NativoCreativeVisibilityTracker(
             visibilityCheckerList.add(VisibilityChecker(trackingOption, viewExposureChecker))
         }
 
-        viewabilityCheckDebouncer = NativoUtils.debounceAction(VISIBILITY_DEBOUNCE_MILLIS) {
+        viewabilityCheckDebouncer = Life360Utils.debounceAction(VISIBILITY_DEBOUNCE_MILLIS) {
             runViewabilityCheck()
         }
 
@@ -210,7 +210,7 @@ class NativoCreativeVisibilityTracker(
     }
 
     companion object Companion {
-        private val TAG = NativoCreativeVisibilityTracker::class.java.simpleName
+        private val TAG = Life360CreativeVisibilityTracker::class.java.simpleName
 
         // Time interval to use for throttling visibility checks and debounce window for events.
         private const val VISIBILITY_DEBOUNCE_MILLIS = 150L

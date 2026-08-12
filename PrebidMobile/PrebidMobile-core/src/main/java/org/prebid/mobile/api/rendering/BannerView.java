@@ -43,9 +43,9 @@ import org.prebid.mobile.rendering.bidding.data.bid.Bid;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.bidding.interfaces.BannerEventHandler;
 import org.prebid.mobile.rendering.bidding.interfaces.StandaloneBannerEventHandler;
-import com.life360.ads.bid.NativoBidExt;
-import com.life360.ads.bid.NativoBidResponse;
-import com.life360.ads.bid.NativoAdType;
+import com.life360.ads.bid.Life360BidExt;
+import com.life360.ads.bid.Life360BidResponse;
+import com.life360.ads.bid.Life360AdType;
 import com.life360.ads.server.NativoServerProxy;
 import org.prebid.mobile.rendering.bidding.listeners.BannerEventListener;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
@@ -84,7 +84,7 @@ public class BannerView extends FrameLayout {
     private AdException prebidException;
 
     private NativoServerProxy nativoServer = new NativoServerProxy();
-    private boolean isNativoBidRequestInProgress;
+    private boolean isLife360BidRequestInProgress;
 
     private final ScreenStateReceiver screenStateReceiver = new ScreenStateReceiver();
 
@@ -107,7 +107,7 @@ public class BannerView extends FrameLayout {
             if (bannerViewListener == null) {
                 return;
             }
-            // Only route to the Nativo render path when the publisher opted in
+            // Only route to the Life360 render path when the publisher opted in
             if (bannerViewListener instanceof Life360BannerViewListener && life360DidRenderBid(winningBid)) {
                 ((Life360BannerViewListener) bannerViewListener).onLife360AdLoaded(BannerView.this);
                 return;
@@ -116,10 +116,10 @@ public class BannerView extends FrameLayout {
         }
 
         private boolean life360DidRenderBid(BidResponse bidResponse) {
-            if (bidResponse instanceof NativoBidResponse) {
-                NativoAdType adType = NativoBidExt.getNativoAdType(bidResponse.getWinningBid());
-                // Nativo rendering not used for type STANDARD_DISPLAY
-                return adType != NativoAdType.STANDARD_DISPLAY;
+            if (bidResponse instanceof Life360BidResponse) {
+                Life360AdType adType = Life360BidExt.getLife360AdType(bidResponse.getWinningBid());
+                // Life360 rendering not used for type STANDARD_DISPLAY
+                return adType != Life360AdType.STANDARD_DISPLAY;
             }
             return false;
         }
@@ -209,7 +209,7 @@ public class BannerView extends FrameLayout {
             prebidException = exception;
 
             bidResponse = null;
-            winningBid = nativoServer.getNativoBidResponse();
+            winningBid = nativoServer.getLife360BidResponse();
             isPrimaryAdServerRequestInProgress = winningBid != null;
             eventHandler.requestAdWithBid(winningBid);
         }
@@ -335,8 +335,8 @@ public class BannerView extends FrameLayout {
             return;
         }
 
-        if (isNativoBidRequestInProgress) {
-            LogUtil.debug(TAG, "loadAd: Skipped. Nativo bid request is in progress.");
+        if (isLife360BidRequestInProgress) {
+            LogUtil.debug(TAG, "loadAd: Skipped. Life360 bid request is in progress.");
             return;
         }
 
@@ -345,20 +345,20 @@ public class BannerView extends FrameLayout {
             return;
         }
 
-        isNativoBidRequestInProgress = true;
-        nativoServer.requestNativoBid(adUnitConfig, (bidResponse, shouldRenderImmediately, error) -> {
-            isNativoBidRequestInProgress = false;
+        isLife360BidRequestInProgress = true;
+        nativoServer.requestLife360Bid(adUnitConfig, (bidResponse, shouldRenderImmediately, error) -> {
+            isLife360BidRequestInProgress = false;
 
             if (shouldRenderImmediately && bidResponse != null) {
                 isPrimaryAdServerRequestInProgress = false;
-                // Start Nativo rendering
+                // Start Life360 rendering
                 bannerEventListener.onSdkWin(bidResponse);
             } else if (adUnitConfig.isPrebidServerEnabled()) {
                 // Start Prebid Server bid request
                 bidLoader.load();
             } else {
                 prebidException = error;
-                winningBid = nativoServer.getNativoBidResponse();
+                winningBid = nativoServer.getLife360BidResponse();
                 isPrimaryAdServerRequestInProgress = winningBid != null;
                 eventHandler.requestAdWithBid(winningBid);
                 bidLoader.setupRefreshTimer();
@@ -526,7 +526,7 @@ public class BannerView extends FrameLayout {
         });
 
         // In serverless mode the refresh timer can't reload from Prebid Server; re-run the full
-        // Nativo + event handler flow instead.
+        // Life360 + event handler flow instead.
         bidLoader.setServerlessRefreshListener(this::loadAd);
     }
 
@@ -593,10 +593,10 @@ public class BannerView extends FrameLayout {
     }
 
         /**
-     * Returns the winning bid response. This can be either a Prebid bid or a Nativo bid,
+     * Returns the winning bid response. This can be either a Prebid bid or a Life360 bid,
      * depending on which won the auction.
      *
-     * @return the winning BidResponse (may be a NativoBidResponse), or null if no winner yet
+     * @return the winning BidResponse (may be a Life360BidResponse), or null if no winner yet
      */
     @Nullable
     public BidResponse getBidResponse() {

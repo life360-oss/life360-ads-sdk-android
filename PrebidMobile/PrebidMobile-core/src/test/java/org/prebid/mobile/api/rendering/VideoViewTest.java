@@ -20,7 +20,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.view.View;
 import android.widget.FrameLayout;
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -70,8 +70,8 @@ public class VideoViewTest {
 
     @Mock public AdViewManager mockAdViewManager;
     @Mock public VideoViewListener mockVideoViewListener;
-    @Mock private NativoCreativeVisibilityTracker mockVisibilityTracker;
-    private NativoCreativeVisibilityTracker.VisibilityTrackerListener visibilityTrackerListener;
+    @Mock private Life360CreativeVisibilityTracker mockVisibilityTracker;
+    private Life360CreativeVisibilityTracker.VisibilityTrackerListener visibilityTrackerListener;
 
     @Before
     public void setup() throws AdException {

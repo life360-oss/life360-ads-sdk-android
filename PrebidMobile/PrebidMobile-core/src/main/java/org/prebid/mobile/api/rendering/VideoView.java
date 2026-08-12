@@ -23,7 +23,7 @@ import android.widget.FrameLayout;
 
 import androidx.core.content.ContextCompat;
 
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 
 import com.life360.ads.core.R;
 import org.prebid.mobile.LogUtil;
@@ -53,8 +53,8 @@ public class VideoView extends BaseAdView {
 
     private VideoViewListener listener;
 
-    private NativoCreativeVisibilityTracker visibilityTracker;
-    private final NativoCreativeVisibilityTracker.VisibilityTrackerListener visibilityTrackerListener = this::handleVisibilityChange;
+    private Life360CreativeVisibilityTracker visibilityTracker;
+    private final Life360CreativeVisibilityTracker.VisibilityTrackerListener visibilityTrackerListener = this::handleVisibilityChange;
 
     private State videoViewState = State.UNDEFINED;
 
@@ -340,7 +340,7 @@ public class VideoView extends BaseAdView {
         stopVisibilityTracking();
 
         final VisibilityTrackerOption visibilityTrackerOption = new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION);
-        visibilityTracker = new NativoCreativeVisibilityTracker(
+        visibilityTracker = new Life360CreativeVisibilityTracker(
             this,
             visibilityTrackerOption,
             true

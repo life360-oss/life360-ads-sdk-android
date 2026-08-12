@@ -7,7 +7,7 @@ import android.view.View
 import android.widget.ImageView
 import java.util.concurrent.atomic.AtomicLong
 
-object NativoUtils {
+object Life360Utils {
     fun debounceAction(intervalMs: Long, action: () -> Unit): () -> Unit {
         val lastCall = AtomicLong(0L)
         return {

@@ -22,7 +22,7 @@ import org.robolectric.annotation.LooperMode
 import org.robolectric.annotation.LooperMode.Mode.LEGACY
 
 /**
- * Covers [NativoFriendlyObstructionManager]: the point-in-time detection ([friendlyObstructionViews])
+ * Covers [Life360FriendlyObstructionManager]: the point-in-time detection ([friendlyObstructionViews])
  * that decides which on-top views OMID should treat as friendly obstructions, and the stateful
  * [reconcile] that emits only the delta as the ad scrolls under / out from overlays. Detection
  * mistakes either erode viewability (transparent overlays counted) or hide real occluders; delta
@@ -35,14 +35,14 @@ import org.robolectric.annotation.LooperMode.Mode.LEGACY
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [23], qualifiers = "w800dp-h800dp-xhdpi")
 @LooperMode(LEGACY)
-class NativoFriendlyObstructionManagerTest {
+class Life360FriendlyObstructionManagerTest {
 
     private val adRect = intArrayOf(0, 0, 200, 200)
 
     private lateinit var activity: Activity
     private lateinit var container: FrameLayout
     private lateinit var ad: View
-    private val manager = NativoFriendlyObstructionManager()
+    private val manager = Life360FriendlyObstructionManager()
 
     @Before
     fun setup() {

@@ -23,7 +23,7 @@ import android.text.TextUtils;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
-import com.life360.ads.exposure.NativoCreativeVisibilityTracker;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
@@ -231,7 +231,7 @@ public class VideoCreative extends VideoCreativeProtocol
     public void startViewabilityTracker() {
         VisibilityTrackerOption visibilityTrackerOption = new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION);
 
-        creativeVisibilityTracker = new NativoCreativeVisibilityTracker(getCreativeView(), visibilityTrackerOption);
+        creativeVisibilityTracker = new Life360CreativeVisibilityTracker(getCreativeView(), visibilityTrackerOption);
         creativeVisibilityTracker.setVisibilityTrackerListener((result) -> {
             if (result.isVisible() && result.shouldFireImpression()) {
                 model.trackVideoEvent(VideoAdEvent.Event.AD_IMPRESSION);

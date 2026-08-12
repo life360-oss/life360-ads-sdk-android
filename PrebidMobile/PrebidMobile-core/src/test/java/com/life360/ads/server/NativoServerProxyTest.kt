@@ -1,6 +1,6 @@
 package com.life360.ads.server
 
-import com.life360.ads.bid.NativoBidResponse
+import com.life360.ads.bid.Life360BidResponse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -14,7 +14,7 @@ import org.prebid.mobile.test.utils.WhiteBox
 /**
  * Covers the head-to-head auction logic in [NativoServerProxy.decideWinner] and its price helpers.
  * This decides which demand source renders, so every null-handling branch and the tie-break
- * (Nativo wins on equal price) is pinned down here.
+ * (Life360 wins on equal price) is pinned down here.
  */
 class NativoServerProxyTest {
 
@@ -25,8 +25,8 @@ class NativoServerProxyTest {
         proxy = NativoServerProxy()
     }
 
-    private fun setNativoResponse(response: NativoBidResponse?) {
-        WhiteBox.setInternalState(proxy, "nativoBidResponse", response)
+    private fun setLife360Response(response: Life360BidResponse?) {
+        WhiteBox.setInternalState(proxy, "life360BidResponse", response)
     }
 
     private fun responseWithPrice(price: Double): BidResponse {
@@ -37,10 +37,10 @@ class NativoServerProxyTest {
         return response
     }
 
-    private fun nativoResponseWithPrice(price: Double): NativoBidResponse {
+    private fun life360ResponseWithPrice(price: Double): Life360BidResponse {
         val bid = Mockito.mock(Bid::class.java)
         Mockito.`when`(bid.price).thenReturn(price)
-        val response = Mockito.mock(NativoBidResponse::class.java)
+        val response = Mockito.mock(Life360BidResponse::class.java)
         Mockito.`when`(response.winningBid).thenReturn(bid)
         return response
     }
@@ -53,43 +53,43 @@ class NativoServerProxyTest {
     }
 
     @Test
-    fun decideWinner_nullPrebid_returnsNativo() {
-        val nativo = Mockito.mock(NativoBidResponse::class.java)
-        setNativoResponse(nativo)
+    fun decideWinner_nullPrebid_returnsLife360() {
+        val life360 = Mockito.mock(Life360BidResponse::class.java)
+        setLife360Response(life360)
 
-        assertSame(nativo, proxy.decideWinner(null))
+        assertSame(life360, proxy.decideWinner(null))
     }
 
     @Test
-    fun decideWinner_nullNativo_returnsPrebid() {
+    fun decideWinner_nullLife360_returnsPrebid() {
         val prebid = Mockito.mock(BidResponse::class.java)
 
         assertSame(prebid, proxy.decideWinner(prebid))
     }
 
     @Test
-    fun decideWinner_nativoHigherPrice_returnsNativo() {
-        val nativo = nativoResponseWithPrice(5.0)
-        setNativoResponse(nativo)
+    fun decideWinner_life360HigherPrice_returnsLife360() {
+        val life360 = life360ResponseWithPrice(5.0)
+        setLife360Response(life360)
 
-        assertSame(nativo, proxy.decideWinner(responseWithPrice(2.0)))
+        assertSame(life360, proxy.decideWinner(responseWithPrice(2.0)))
     }
 
     @Test
     fun decideWinner_prebidHigherPrice_returnsPrebid() {
-        setNativoResponse(nativoResponseWithPrice(1.0))
+        setLife360Response(life360ResponseWithPrice(1.0))
         val prebid = responseWithPrice(3.0)
 
         assertSame(prebid, proxy.decideWinner(prebid))
     }
 
     @Test
-    fun decideWinner_equalPrice_favorsNativo() {
-        val nativo = nativoResponseWithPrice(2.0)
-        setNativoResponse(nativo)
+    fun decideWinner_equalPrice_favorsLife360() {
+        val life360 = life360ResponseWithPrice(2.0)
+        setLife360Response(life360)
 
-        // `nativoPrice >= prebidPrice` -> a tie goes to Nativo.
-        assertSame(nativo, proxy.decideWinner(responseWithPrice(2.0)))
+        // `life360Price >= prebidPrice` -> a tie goes to Life360.
+        assertSame(life360, proxy.decideWinner(responseWithPrice(2.0)))
     }
 
     // endregion

@@ -1,6 +1,6 @@
 package com.life360.ads.bid
 
-import com.life360.ads.renderer.NativoRenderer
+import com.life360.ads.renderer.Life360Renderer
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -12,15 +12,15 @@ import org.prebid.mobile.configuration.AdUnitConfiguration
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse
 
 /**
- * Regression tests for [NativoBidResponse] `applyTargeting`: price strings (`hb_pb` / `hb_pb_nativo`)
+ * Regression tests for [Life360BidResponse] `applyTargeting`: price strings (`hb_pb` / `hb_pb_nativo`)
  * and creative size (`hb_size` / `hb_size_nativo`) derived from the winning bid.
  */
-class NativoBidResponseTest {
+class Life360BidResponseTest {
 
     @Test
     fun hb_pb_formatsPriceWithTwoDecimalPlaces() {
         val price = 29.80
-        val response = nativoBidResponse(singleBidJson(price))
+        val response = life360BidResponse(singleBidJson(price))
 
         assertFalse(response.hasParseError())
         val bid = response.winningBid
@@ -33,7 +33,7 @@ class NativoBidResponseTest {
 
     @Test
     fun hb_pb_forWholeNumberPrice_usesTwoFractionDigits() {
-        val response = nativoBidResponse(singleBidJson(5.0))
+        val response = life360BidResponse(singleBidJson(5.0))
 
         val bid = response.winningBid!!
         val hbPb = bid.prebid.targeting["hb_pb"]
@@ -43,7 +43,7 @@ class NativoBidResponseTest {
 
     @Test
     fun hb_pb_forOnePointFive_usesTwoFractionDigits() {
-        val response = nativoBidResponse(singleBidJson(1.5))
+        val response = life360BidResponse(singleBidJson(1.5))
 
         val bid = response.winningBid!!
         val hbPb = bid.prebid.targeting["hb_pb"]
@@ -56,7 +56,7 @@ class NativoBidResponseTest {
         val low = bidJson("low", price = 0.5)
         val high = bidJson("high", price = 2.75)
         val json = responseJson(JSONArray().put(low).put(high))
-        val response = nativoBidResponse(json)
+        val response = life360BidResponse(json)
 
         val winning = response.winningBid!!
         assertEquals("high", winning.id)
@@ -65,7 +65,7 @@ class NativoBidResponseTest {
 
     @Test
     fun hb_pb_forTypicalCpm_matchesTwoDecimalFormatting() {
-        val response = nativoBidResponse(singleBidJson(0.15))
+        val response = life360BidResponse(singleBidJson(0.15))
 
         val bid = response.winningBid!!
         assertEquals("0.15", bid.prebid.targeting["hb_pb"])
@@ -74,7 +74,7 @@ class NativoBidResponseTest {
 
     @Test
     fun hb_size_and_hb_size_nativo_areWidthTimesHeightFromWinningBid() {
-        val response = nativoBidResponse(singleBidJson(price = 1.0, width = 320, height = 50))
+        val response = life360BidResponse(singleBidJson(price = 1.0, width = 320, height = 50))
 
         val bid = response.winningBid!!
         val targeting = bid.prebid.targeting
@@ -88,7 +88,7 @@ class NativoBidResponseTest {
     fun hb_size_usesWinningBidDimensionsWhenBidsHaveDifferentSizes() {
         val smallBanner = bidJson("small", price = 1.0, width = 320, height = 50)
         val leaderboard = bidJson("leader", price = 5.0, width = 728, height = 90)
-        val response = nativoBidResponse(responseJson(JSONArray().put(smallBanner).put(leaderboard)))
+        val response = life360BidResponse(responseJson(JSONArray().put(smallBanner).put(leaderboard)))
 
         val winning = response.winningBid!!
         assertEquals("leader", winning.id)
@@ -105,7 +105,7 @@ class NativoBidResponseTest {
             .put("adm", "adm")
             .put("ext", JSONObject().put("prebid", JSONObject()))
         val json = responseJson(JSONArray().put(bid))
-        val response = nativoBidResponse(json)
+        val response = life360BidResponse(json)
 
         val winning = response.winningBid!!
         assertEquals(0, winning.width)
@@ -115,12 +115,12 @@ class NativoBidResponseTest {
     }
 
     @Test
-    fun applyRendererMeta_setsNativoRendererNameAndVersionOnWinningBid() {
-        val response = nativoBidResponse(singleBidJson(1.0))
+    fun applyRendererMeta_setsLife360RendererNameAndVersionOnWinningBid() {
+        val response = life360BidResponse(singleBidJson(1.0))
 
         val meta = response.winningBid!!.prebid.meta
-        assertEquals(NativoRenderer.NAME, meta[BidResponse.KEY_RENDERER_NAME])
-        assertEquals(NativoRenderer.VERSION, meta[BidResponse.KEY_RENDERER_VERSION])
+        assertEquals(Life360Renderer.NAME, meta[BidResponse.KEY_RENDERER_NAME])
+        assertEquals(Life360Renderer.VERSION, meta[BidResponse.KEY_RENDERER_VERSION])
     }
 
     @Test
@@ -132,7 +132,7 @@ class NativoBidResponseTest {
             .put("seatbid", JSONArray().put(seatA).put(seatB))
             .toString()
 
-        val response = nativoBidResponse(json)
+        val response = life360BidResponse(json)
 
         assertEquals("b1", response.winningBid!!.id)
     }
@@ -141,9 +141,9 @@ class NativoBidResponseTest {
     fun winningBid_whenNoSeatbids_isNullAndNoTargetingApplied() {
         val json = JSONObject().put("id", "resp1").put("seatbid", JSONArray()).toString()
 
-        val response = nativoBidResponse(json)
+        val response = life360BidResponse(json)
 
-        // No Nativo bid selected, so getWinningBid() falls through to the base response (null here).
+        // No Life360 bid selected, so getWinningBid() falls through to the base response (null here).
         assertNull(response.winningBid)
     }
 
@@ -152,13 +152,13 @@ class NativoBidResponseTest {
         val emptySeat = JSONObject().put("seat", "nativo").put("bid", JSONArray())
         val json = JSONObject().put("id", "resp1").put("seatbid", JSONArray().put(emptySeat)).toString()
 
-        val response = nativoBidResponse(json)
+        val response = life360BidResponse(json)
 
         assertNull(response.winningBid)
     }
 
-    private fun nativoBidResponse(json: String): NativoBidResponse {
-        return NativoBidResponse(json, AdUnitConfiguration())
+    private fun life360BidResponse(json: String): Life360BidResponse {
+        return Life360BidResponse(json, AdUnitConfiguration())
     }
 
     private fun singleBidJson(price: Double, width: Int = 320, height: Int = 50): String {

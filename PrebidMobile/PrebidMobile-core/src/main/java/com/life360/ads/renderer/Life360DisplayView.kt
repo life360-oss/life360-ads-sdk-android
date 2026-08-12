@@ -8,10 +8,10 @@ import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener
 
 /**
- * Nativo-specific subclass of PrebidDisplayView that fixes the view removal issue
+ * Life360-specific subclass of PrebidDisplayView that fixes the view removal issue
  * when scrolling past the banner view.
  */
-class NativoDisplayView : PrebidDisplayView {
+class Life360DisplayView : PrebidDisplayView {
 
     constructor(
         context: Context,

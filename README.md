@@ -13,10 +13,10 @@ Direct ad campaigns through Nativo are supported via an `isOwnedOperated` flag. 
 Rendering support for all unique Nativo ad formats, including types not natively supported by Prebid.
 
 ### Full-width Ad Rendering
-The `NativoRenderer` plugin handles dynamic expansion of ad creatives to full width/height using constraint-based layout, ensuring correct display across varying screen sizes.
+The `Life360Renderer` plugin handles dynamic expansion of ad creatives to full width/height using constraint-based layout, ensuring correct display across varying screen sizes.
 
 ### Geo/Location Data with Nativo
-When a developer sets `shareGeoLocationWithNativo` to `true` and the user grants location permission, the SDK conditionally appends ORTB `geo` parameters to the Nativo bid request.
+When a developer sets `shareGeoLocationWithLife360` to `true` and the user grants location permission, the SDK conditionally appends ORTB `geo` parameters to the Nativo bid request.
 
 ### GAM Click Attribution for 3rd party ads (Nativo & Prebid)
 When using GAM as the ad server, clicks within a Nativo or Prebid ad are tracked back into the GAM platform, ensuring accurate click attribution and reporting.
