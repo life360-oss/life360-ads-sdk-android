@@ -592,7 +592,7 @@ public class BannerView extends FrameLayout {
         }
     }
 
-        /**
+    /**
      * Returns the winning bid response. This can be either a Prebid bid or a Life360 bid,
      * depending on which won the auction.
      *

@@ -60,7 +60,6 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
                 )
             }
             val bidResponse = bannerView?.bidResponse
-            val winningBid = bidResponse?.winningBid
 
             /**
              * Created [WebViewProvider] specifically for AppHarbr as a way to get direct access
@@ -77,8 +76,8 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
                 AdSdk.PREBID_LIFE360,
                 bidResponse?.adUnitConfiguration?.configId.orEmpty(),
                 AdDataType.JSON, // the winning bid is handed over as its JSON representation
-                winningBid?.jsonString.orEmpty(),
-                winningBid?.crid.orEmpty(),
+                bidResponse?.winningBidJson.orEmpty(),
+                bidResponse?.winningBid?.crid.orEmpty(),
                 webViewProvider?.renderedWebView,
                 bidResponse?.targeting?.takeIf { it.isNotEmpty() },
             )

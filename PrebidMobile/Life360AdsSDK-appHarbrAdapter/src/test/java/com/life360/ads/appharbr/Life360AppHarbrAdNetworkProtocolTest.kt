@@ -60,7 +60,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
         val bannerView = bannerViewWinning(
             configId = "nativo-imp-id",
             creativeId = "crid-42",
-            bidJson = """{"price":1.23}""",
+            winningBidJson = """{"price":1.23}""",
             targeting = hashMapOf("hb_bidder" to "nativo"),
         )
 
@@ -74,13 +74,24 @@ class Life360AppHarbrAdNetworkProtocolTest {
         assertEquals(mapOf("hb_bidder" to "nativo"), properties.customTargetingMap)
     }
 
+    /** A scan requested before a bid response exists must not report the literal string "null". */
+    @Test
+    fun getWinningBid_reportsEmptyContentWhenBidResponseIsMissing() {
+        val bannerView = mock(BannerView::class.java)
+        `when`(bannerView.bidResponse).thenReturn(null)
+
+        val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
+
+        assertEquals("", properties.content)
+    }
+
     /** The SDK rendered ad view reports its own WebView, so no search through the hierarchy is needed. */
     @Test
     fun getWinningBid_takesTheWebViewFromTheRenderedAdView() {
         val webView = mock(WebViewBase::class.java)
         val displayView = mock(DisplayView::class.java)
         `when`(displayView.renderedWebView).thenReturn(webView)
-        val bannerView = bannerViewWinning("config", "crid", "{}", hashMapOf())
+        val bannerView = bannerViewWinning("config", "crid", winningBidJson = "{}", targeting = hashMapOf())
         `when`(bannerView.getChildAt(0)).thenReturn(displayView)
 
         val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
@@ -94,7 +105,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
      */
     @Test
     fun getWinningBid_reportsNoWebViewForAnAdServerRenderedView() {
-        val bannerView = bannerViewWinning("config", "crid", "{}", hashMapOf())
+        val bannerView = bannerViewWinning("config", "crid", winningBidJson = "{}", targeting = hashMapOf())
         `when`(bannerView.getChildAt(0)).thenReturn(FrameLayout(context))
 
         val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
@@ -107,7 +118,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
     fun getWinningBid_reportsNoWebViewBeforeTheCreativeResolves() {
         val displayView = mock(DisplayView::class.java)
         `when`(displayView.renderedWebView).thenReturn(null)
-        val bannerView = bannerViewWinning("config", "crid", "{}", hashMapOf())
+        val bannerView = bannerViewWinning("config", "crid", winningBidJson = "{}", targeting = hashMapOf())
         `when`(bannerView.getChildAt(0)).thenReturn(displayView)
 
         val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
@@ -149,12 +160,11 @@ class Life360AppHarbrAdNetworkProtocolTest {
     private fun bannerViewWinning(
         configId: String,
         creativeId: String,
-        bidJson: String,
+        winningBidJson: String,
         targeting: HashMap<String, String>,
     ): BannerView {
         val bid = mock(Bid::class.java)
         `when`(bid.crid).thenReturn(creativeId)
-        `when`(bid.jsonString).thenReturn(bidJson)
 
         val adUnitConfiguration = mock(AdUnitConfiguration::class.java)
         `when`(adUnitConfiguration.configId).thenReturn(configId)
@@ -163,6 +173,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
         `when`(bidResponse.winningBid).thenReturn(bid)
         `when`(bidResponse.adUnitConfiguration).thenReturn(adUnitConfiguration)
         `when`(bidResponse.targeting).thenReturn(targeting)
+        `when`(bidResponse.winningBidJson).thenReturn(winningBidJson)
 
         val bannerView = mock(BannerView::class.java)
         `when`(bannerView.bidResponse).thenReturn(bidResponse)
