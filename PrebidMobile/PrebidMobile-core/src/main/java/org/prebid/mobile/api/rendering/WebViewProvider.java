@@ -4,8 +4,8 @@ import androidx.annotation.Nullable;
 import org.prebid.mobile.rendering.views.webview.WebViewBase;
 
 /**
- * Hands out the rendered WebView by reference so callers do not have to walk the view hierarchy
- * looking for it.
+ * Returns the WebView by reference so callers do not have to walk the view hierarchy
+ * looking for it. Created for third-party AppHarbr integration.
  */
 public interface WebViewProvider {
 

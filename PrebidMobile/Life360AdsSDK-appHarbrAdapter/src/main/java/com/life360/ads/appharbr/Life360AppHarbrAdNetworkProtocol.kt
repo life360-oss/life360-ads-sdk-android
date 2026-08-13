@@ -14,12 +14,11 @@ import org.prebid.mobile.api.rendering.WebViewProvider
 
 /**
  * Describes Life360 demand to AppHarbr so it can scan what the SDK renders. Register it from your app,
- * after `AppHarbr.initialize` and before the first ad loads:
+ * before `AppHarbr.initialize` and before the first ad loads:
  *
  * ```
  * Life360AppHarbrAdNetworkProtocol.initAdQualityService()
  * ```
- *
  */
 object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
 
@@ -29,10 +28,6 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
 
     /**
      * Registers this protocol with AppHarbr as the Life360 custom ad network.
-     *
-     * AppHarbr ships its Life360 adapter as a file with no Maven coordinate, so it cannot be a declared
-     * dependency of this module. An app that never adds `AH-Life360-Adapter-*.aar` therefore reaches the
-     * catch below instead of crashing on a missing class.
      *
      * @return whether AppHarbr accepted the registration.
      */
@@ -64,17 +59,18 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
                             "($mediationObject); reporting an empty bid to AppHarbr"
                 )
             }
-            // The winning Bid's own JSON, not BidResponse.getWinningBidJson(): that field holds the whole
-            // bid response until getWinningBid() overwrites it as a side effect.
             val bidResponse = bannerView?.bidResponse
             val winningBid = bidResponse?.winningBid
+
+            /**
+             * Created [WebViewProvider] specifically for AppHarbr as a way to get direct access
+             * to the web view before it is injected into view
+             */
             val webViewProvider = (bannerView as? ViewGroup)?.getChildAt(0) as? WebViewProvider
             if (webViewProvider == null) {
                 LogUtil.debug(TAG, "Unable to find WebViewProvider from BannerView")
             }
 
-            // Every argument is passed explicitly: leaving an optional one to its Kotlin default would bind
-            // to AppHarbr's synthetic constructor overload and its default-value bitmask.
             return AdQualityAdNetworkProperties(
                 mediationAdUnitId,
                 adFormat,
