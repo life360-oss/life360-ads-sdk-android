@@ -8,6 +8,7 @@ import com.appharbr.sdk.engine.AdSdk
 import com.appharbr.sdk.engine.adformat.AdDataType
 import com.appharbr.sdk.engine.adformat.AdFormat
 import com.life360.ads.Life360Ads
+import com.life360.ads.bid.Life360BidExt
 import org.prebid.mobile.LogUtil
 import org.prebid.mobile.api.rendering.BannerView
 import org.prebid.mobile.api.rendering.WebViewProvider
@@ -23,6 +24,10 @@ import org.prebid.mobile.api.rendering.WebViewProvider
 object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
 
     private val TAG = "Life360AppHarbr"
+    private const val BYPASS_KEY = "bypass"
+    private const val RENDERER_KEY = "renderer"
+    private const val RENDERER_LIFE360 = "life360"
+    private const val RENDERER_GAM = "gam"
 
     override val adNetworkVersion: String = Life360Ads.version
 
@@ -70,6 +75,14 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
                 LogUtil.debug(TAG, "Unable to find WebViewProvider from BannerView")
             }
 
+            // Detect renderer
+            val rendererType = if (bannerView?.adServerDidWin == true) RENDERER_GAM else RENDERER_LIFE360
+
+            // If demand is owned and operated, bypass AppHarbr's ad-quality-check
+//            val shouldBypass = bidResponse?.let {
+//                Life360BidExt.isOwnedOperated(it.winningBid)
+//            } ?: true
+
             return AdQualityAdNetworkProperties(
                 mediationAdUnitId,
                 adFormat,
@@ -79,7 +92,7 @@ object Life360AppHarbrAdNetworkProtocol : AdQualityAdNetworkProtocol {
                 bidResponse?.winningBidJson.orEmpty(),
                 bidResponse?.winningBid?.crid.orEmpty(),
                 webViewProvider?.renderedWebView,
-                bidResponse?.targeting?.takeIf { it.isNotEmpty() },
+                mapOf(RENDERER_KEY to rendererType)
             )
         } catch (throwable: Throwable) {
             LogUtil.error(TAG, "Failed to get winning bid: $throwable")

@@ -98,6 +98,9 @@ public class BannerView extends FrameLayout {
     private boolean isPrimaryAdServerRequestInProgress;
     private boolean adFailed;
 
+    // Set to true if the primary ad server (from BannerEventHandler) wins
+    public boolean adServerDidWin = false;
+
     private String nativeStylesCreative = null;
 
     //region ==================== Listener implementation
@@ -219,7 +222,7 @@ public class BannerView extends FrameLayout {
         @Override
         public void onSdkWin(@Nullable BidResponse sdkBidResponse) {
             markPrimaryAdRequestFinished();
-
+            adServerDidWin = false;
             winningBid = sdkBidResponse;
             AdException parsedException = RenderingExceptionParser.getPrebidException(sdkBidResponse, prebidException);
             if (parsedException != null) {
@@ -233,7 +236,7 @@ public class BannerView extends FrameLayout {
         @Override
         public void onAdServerWin(View view) {
             markPrimaryAdRequestFinished();
-
+            adServerDidWin = true;
             notifyAdLoadedListener();
             displayAdServerView(view);
         }
@@ -244,7 +247,7 @@ public class BannerView extends FrameLayout {
         @Override
         public void onAdFailed(AdException gamException) {
             markPrimaryAdRequestFinished();
-
+            adServerDidWin = false;
             winningBid = nativoServer.decideWinner(bidResponse);
             boolean prebidAlsoWithoutAd = RenderingExceptionParser.isBidInvalid(winningBid);
             if (prebidAlsoWithoutAd) {
