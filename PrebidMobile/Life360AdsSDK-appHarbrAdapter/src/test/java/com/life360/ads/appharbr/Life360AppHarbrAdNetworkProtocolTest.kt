@@ -2,9 +2,11 @@ package com.life360.ads.appharbr
 
 import android.content.Context
 import android.widget.FrameLayout
+import com.appharbr.sdk.engine.AdSdk
 import com.appharbr.sdk.engine.adformat.AdDataType
 import com.appharbr.sdk.engine.adformat.AdFormat
 import com.life360.ads.Life360Ads
+import com.life360.ads.bid.AdServerType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -62,6 +64,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
             creativeId = "crid-42",
             winningBidJson = """{"price":1.23}""",
             targeting = hashMapOf("hb_bidder" to "nativo"),
+            adServer = AdServerType.LIFE360,
         )
 
         val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
@@ -71,7 +74,30 @@ class Life360AppHarbrAdNetworkProtocolTest {
         assertEquals("crid-42", properties.creativeId)
         assertEquals("""{"price":1.23}""", properties.content)
         assertEquals(AdDataType.JSON, properties.contentType)
-        assertEquals(mapOf("hb_bidder" to "nativo"), properties.customTargetingMap)
+        assertEquals(AdSdk.PREBID_LIFE360, properties.adNetwork)
+    }
+
+    @Test
+    fun getWinningBid_reportsGamOrPrebidAdNetworkWhenTheyWon() {
+        val gamBannerView = bannerViewWinning("config", "crid", "{}", hashMapOf(), adServer = AdServerType.GAM)
+        val prebidBannerView = bannerViewWinning("config", "crid", "{}", hashMapOf(), adServer = AdServerType.PREBID)
+
+        val gamProperties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, gamBannerView)
+        val prebidProperties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, prebidBannerView)
+
+        assertEquals(AdSdk.GAM, gamProperties.adNetwork)
+        assertEquals(AdSdk.PREBID, prebidProperties.adNetwork)
+    }
+
+    /** Before the first auction resolves, adServer is null — fall back to Life360 rather than guess. */
+    @Test
+    fun getWinningBid_fallsBackToLife360AdNetworkBeforeTheAuctionResolves() {
+        val bannerView = mock(BannerView::class.java)
+        `when`(bannerView.adServerWinner).thenReturn(null)
+
+        val properties = protocol.getWinningBid("mediation-unit", AdFormat.BANNER, bannerView)
+
+        assertEquals(AdSdk.PREBID_LIFE360, properties.adNetwork)
     }
 
     /** A scan requested before a bid response exists must not report the literal string "null". */
@@ -142,7 +168,6 @@ class Life360AppHarbrAdNetworkProtocolTest {
         assertEquals("", properties.creativeId)
         assertEquals("", properties.adNetworkUnitId)
         assertNull(properties.webViewRef)
-        assertNull(properties.customTargetingMap)
     }
 
     /**
@@ -162,6 +187,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
         creativeId: String,
         winningBidJson: String,
         targeting: HashMap<String, String>,
+        adServer: AdServerType = AdServerType.LIFE360,
     ): BannerView {
         val bid = mock(Bid::class.java)
         `when`(bid.crid).thenReturn(creativeId)
@@ -177,6 +203,7 @@ class Life360AppHarbrAdNetworkProtocolTest {
 
         val bannerView = mock(BannerView::class.java)
         `when`(bannerView.bidResponse).thenReturn(bidResponse)
+        `when`(bannerView.adServerWinner).thenReturn(adServer)
         return bannerView
     }
 }
