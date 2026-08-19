@@ -54,7 +54,7 @@ class Life360BidRequester : ExternalBidRequester {
         builders.add(UserConsentParameterBuilder())
         builders.add(Life360ParameterBuilder(adUnitConfiguration))
 
-        val urlBuilder = URLBuilder(Life360PathBuilder(), builders, AdRequestInput())
+        val urlBuilder = URLBuilder(Life360PathBuilder(context, adUnitConfiguration.configId), builders, AdRequestInput())
         val urlComponents = urlBuilder.buildUrl()
 
         val params = BaseNetworkTask.GetUrlParams().apply {
