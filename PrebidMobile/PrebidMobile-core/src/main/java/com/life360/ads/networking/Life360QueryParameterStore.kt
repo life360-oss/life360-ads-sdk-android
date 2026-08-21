@@ -8,7 +8,7 @@ import android.content.Context
  * per-configId SharedPreferences file (see [prefsName]); 
  * 
  * Example usage:
- * context.getSharedPreferences("l360_exchange_params_$configId", Context.MODE_PRIVATE)
+ * context.getSharedPreferences(Life360QueryParameterStore.prefsName(configId), Context.MODE_PRIVATE)
     .edit()
     .putString("param_a", "394223")
     .apply()
