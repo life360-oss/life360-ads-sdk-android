@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug/demo network config so a proxy (Charles, mitmproxy, etc.) can inspect the SDK's HTTPS
+  traffic. By default Android only trusts system CAs, so a proxy's user-installed CA cert can't
+  intercept TLS. Trusting the "user" cert source fixes that; cleartext is permitted for proxies
+  that downgrade to HTTP. Do NOT ship this in a production build.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
