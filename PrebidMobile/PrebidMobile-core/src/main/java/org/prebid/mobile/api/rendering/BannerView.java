@@ -471,6 +471,21 @@ public class BannerView extends FrameLayout {
     }
 
     /**
+     * Sets the Global Placement ID (GPID) for this ad unit. The value is emitted as
+     * {@code imp.ext.gpid} on the outgoing bid request.
+     *
+     * @param gpid the GPID to set, or {@code null} to leave it unset.
+     */
+    public void setGpid(@Nullable String gpid) {
+        adUnitConfig.setGpid(gpid);
+    }
+
+    @Nullable
+    public String getGpid() {
+        return adUnitConfig.getGpid();
+    }
+
+    /**
      * Which ad server actually served the last impression, or null before the first auction resolves.
      */
     @Nullable

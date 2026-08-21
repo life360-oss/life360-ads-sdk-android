@@ -509,6 +509,18 @@ public class BannerViewTest {
         assertEquals(expected, bannerView.getPbAdSlot());
     }
 
+    @Test
+    public void setGpid_EqualsGetGpid() {
+        final String expected = "/life360-ads/location/slot_1";
+        bannerView.setGpid(expected);
+        assertEquals(expected, bannerView.getGpid());
+    }
+
+    @Test
+    public void gpid_defaultsToNull() {
+        assertNull(bannerView.getGpid());
+    }
+
     private BidRequesterListener getBidRequesterListener() {
         try {
             return (BidRequesterListener) WhiteBox.field(BannerView.class, "bidRequesterListener").get(bannerView);

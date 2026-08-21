@@ -48,6 +48,8 @@ public class TargetingParams {
     private static String omidPartnerName;
     private static String omidPartnerVersion;
     @Nullable
+    private static String publisherUserId;
+    @Nullable
     private static String openRtbConfig;
     private static Pair<Float, Float> userLatLon;
     private static Ext userExt;
@@ -523,6 +525,24 @@ public class TargetingParams {
      */
     public static void setGlobalOrtbConfig(String config) {
         openRtbConfig = config;
+    }
+
+    /**
+     * Sets the publisher's own identifier for the user, sent as OpenRTB {@code user.id}.
+     * Pass {@code null} to omit the field from the request.
+     *
+     * @param userId the publisher's identifier for the current user.
+     */
+    public static void setPublisherUserId(@Nullable String userId) {
+        publisherUserId = userId;
+    }
+
+    /**
+     * @return the publisher's identifier for the current user, or {@code null} if unset.
+     */
+    @Nullable
+    public static String getPublisherUserId() {
+        return publisherUserId;
     }
 
 
