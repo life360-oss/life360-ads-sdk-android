@@ -36,6 +36,9 @@ import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
 import org.prebid.mobile.rendering.models.AdDetails;
 import org.prebid.mobile.rendering.views.AdViewManager;
 import org.prebid.mobile.rendering.views.AdViewManagerListener;
+import org.prebid.mobile.rendering.views.webview.PrebidWebViewBase;
+import org.prebid.mobile.rendering.views.webview.WebViewBanner;
+import org.prebid.mobile.rendering.views.webview.WebViewBase;
 import org.prebid.mobile.test.utils.WhiteBox;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
@@ -126,6 +129,64 @@ public class PrebidDisplayViewTest {
         AdViewManagerListener adViewManagerListener = getAdViewManagerListener();
         adViewManagerListener.creativeCollapsed();
         verify(mockDisplayViewListener).onAdClosed();
+    }
+
+    @Test
+    public void whenNoCreativeResolved_GetRenderedWebViewReturnsNull() {
+        useMockAdViewManager();
+        when(mockAdViewManager.getCurrentCreativeView()).thenReturn(null);
+
+        Assert.assertNull(prebidDisplayView.getRenderedWebView());
+    }
+
+    @Test
+    public void whenCreativeResolvedButNotDisplayed_GetRenderedWebViewReturnsCreativeWebView() {
+        WebViewBase mockWebView = mockResolvedCreative().getWebView();
+
+        Assert.assertEquals(-1, prebidDisplayView.indexOfChild(mockWebView));
+        Assert.assertSame(mockWebView, prebidDisplayView.getRenderedWebView());
+    }
+
+    @Test
+    public void whenTwoPartCreativeResolved_GetRenderedWebViewReturnsMraidWebView() {
+        PrebidWebViewBase mockCreativeView = mock(PrebidWebViewBase.class);
+        WebViewBanner mockMraidWebView = mock(WebViewBanner.class);
+        when(mockCreativeView.getWebView()).thenReturn(null);
+        when(mockCreativeView.getMraidWebView()).thenReturn(mockMraidWebView);
+        useMockAdViewManager();
+        when(mockAdViewManager.getCurrentCreativeView()).thenReturn(mockCreativeView);
+
+        Assert.assertSame(mockMraidWebView, prebidDisplayView.getRenderedWebView());
+    }
+
+    @Test
+    public void whenNonHtmlCreativeResolved_GetRenderedWebViewReturnsNull() {
+        useMockAdViewManager();
+        when(mockAdViewManager.getCurrentCreativeView()).thenReturn(new View(context));
+
+        Assert.assertNull(prebidDisplayView.getRenderedWebView());
+    }
+
+    @Test
+    public void whenDestroyed_GetRenderedWebViewReturnsNull() {
+        mockResolvedCreative();
+
+        prebidDisplayView.destroy();
+
+        Assert.assertNull(prebidDisplayView.getRenderedWebView());
+    }
+
+    /** Stands in a resolved one part HTML creative, as it exists between ad load and display. */
+    private PrebidWebViewBase mockResolvedCreative() {
+        PrebidWebViewBase mockCreativeView = mock(PrebidWebViewBase.class);
+        when(mockCreativeView.getWebView()).thenReturn(mock(WebViewBase.class));
+        useMockAdViewManager();
+        when(mockAdViewManager.getCurrentCreativeView()).thenReturn(mockCreativeView);
+        return mockCreativeView;
+    }
+
+    private void useMockAdViewManager() {
+        WhiteBox.setInternalState(prebidDisplayView, "adViewManager", mockAdViewManager);
     }
 
     private AdViewManagerListener getAdViewManagerListener() throws IllegalAccessException {

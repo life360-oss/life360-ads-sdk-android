@@ -18,6 +18,7 @@ task combinedJavadoc(type: Javadoc, dependsOn: assemble) {
             .plus(project(":PrebidMobile-admobAdapters").files("src/main/java"))
             .plus(project(":PrebidMobile-gamEventHandlers").files("src/main/java"))
             .plus(project(":PrebidMobile-maxAdapters").files("src/main/java"))
+            .plus(project(":Life360AdsSDK-appHarbrAdapter").files("src/main/java"))
     source = sourcePaths
     destinationDir = file("$projectDir/build/combinedJavadoc")
     options.addBooleanOption('-ignore-source-errors', true)

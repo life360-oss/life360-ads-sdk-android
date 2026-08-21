@@ -36,11 +36,13 @@ import org.prebid.mobile.rendering.views.AdViewManager;
 import org.prebid.mobile.rendering.views.AdViewManagerListener;
 import org.prebid.mobile.rendering.views.interstitial.InterstitialManager;
 import org.prebid.mobile.rendering.views.video.VideoViewListener;
+import org.prebid.mobile.rendering.views.webview.PrebidWebViewBase;
+import org.prebid.mobile.rendering.views.webview.WebViewBase;
 
 /**
  * Internal view renderer for plugin renderer.
  */
-public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable {
+public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable, WebViewProvider {
 
     private final static String TAG = DisplayView.class.getSimpleName();
     private static final String CONTENT_DESCRIPTION_AD_VIEW = "adView";
@@ -201,6 +203,19 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable 
 
     public InterstitialDisplayPropertiesInternal getInterstitialDisplayProperties() {
         return interstitialManager.getInterstitialDisplayProperties();
+    }
+
+    @Nullable
+    @Override
+    public WebViewBase getRenderedWebView() {
+        View creativeView = adViewManager != null ? adViewManager.getCurrentCreativeView() : null;
+        if (!(creativeView instanceof PrebidWebViewBase)) {
+            return null;
+        }
+        // One part creatives render into the default slot, two part MRAID creatives into the mraid slot.
+        PrebidWebViewBase htmlCreativeView = (PrebidWebViewBase) creativeView;
+        WebViewBase webView = htmlCreativeView.getWebView();
+        return webView != null ? webView : htmlCreativeView.getMraidWebView();
     }
 
     @Override

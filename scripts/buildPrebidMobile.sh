@@ -91,6 +91,7 @@ modules=(
   "PrebidMobile-gamEventHandlers"
   "PrebidMobile-admobAdapters"
   "PrebidMobile-maxAdapters"
+  "Life360AdsSDK-appHarbrAdapter"
 )
 
 projectPaths=(
@@ -99,6 +100,7 @@ projectPaths=(
   "$BASEDIR/PrebidMobile/PrebidMobile-gamEventHandlers"
   "$BASEDIR/PrebidMobile/PrebidMobile-admobAdapters"
   "$BASEDIR/PrebidMobile/PrebidMobile-maxAdapters"
+  "$BASEDIR/PrebidMobile/Life360AdsSDK-appHarbrAdapter"
 )
 
 mkdir "$OUTDIR/aar"

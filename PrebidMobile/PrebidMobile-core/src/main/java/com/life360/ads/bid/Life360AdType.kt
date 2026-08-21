@@ -10,8 +10,9 @@ enum class Life360AdType(val type: Int) {
     STORY(7);
 
     companion object {
+        // entries requires the Kotlin 1.9+ stdlib; this module targets 1.8 for Geoedge AppHarbr compatibility.
         fun fromInt(value: Int): Life360AdType? {
-            return entries.firstOrNull { it.type == value }
+            return values().firstOrNull { it.type == value }
         }
     }
 }

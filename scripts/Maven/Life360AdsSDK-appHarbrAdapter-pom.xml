@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.life360</groupId>
+    <artifactId>life360-ads-appharbr-adapter</artifactId>
+    <version>${revision}</version>
+    <packaging>jar</packaging>
+
+    <name> Life360 Ads Android SDK – AppHarbr Adapter</name>
+    <description>Life360 Ads ad-quality integration for the AppHarbr SDK</description>
+    <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
+
+    <licenses>
+        <license>
+            <name>The Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Life360 Ads Team</name>
+            <email>ads@life360.com</email>
+            <organization>Life360, Inc.</organization>
+            <organizationUrl>https://ads.life360.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</connection>
+        <developerConnection>scm:git:https://github.com/life360-oss/life360-ads-sdk-android.git</developerConnection>
+        <url>https://github.com/life360-oss/life360-ads-sdk-android</url>
+    </scm>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.life360</groupId>
+            <artifactId>life360-ads-sdk</artifactId>
+            <version>${revision}</version>
+            <scope>compile</scope>
+        </dependency>
+        <!--
+          AppHarbr publishes through JitPack rather than Maven Central, so consumers of this artifact
+          must add https://jitpack.io to their repositories for this dependency to resolve.
+        -->
+        <dependency>
+            <groupId>com.github.appharbr</groupId>
+            <artifactId>appharbr-android-sdk</artifactId>
+            <version>2.38.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- This module is written entirely in Kotlin, unlike the Java adapter modules. -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>2.3.0</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+</project>
