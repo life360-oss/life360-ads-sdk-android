@@ -43,6 +43,7 @@ import org.prebid.mobile.rendering.bidding.data.bid.Bid;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.bidding.interfaces.BannerEventHandler;
 import org.prebid.mobile.rendering.bidding.interfaces.StandaloneBannerEventHandler;
+import com.life360.ads.bid.AdServerType;
 import com.life360.ads.bid.Life360BidExt;
 import com.life360.ads.bid.Life360BidResponse;
 import com.life360.ads.bid.Life360AdType;
@@ -98,6 +99,10 @@ public class BannerView extends FrameLayout {
     private boolean isPrimaryAdServerRequestInProgress;
     private boolean adFailed;
 
+    // Which ad server actually served the last impression; null until the first auction resolves
+    @Nullable
+    private AdServerType adServer;
+
     private String nativeStylesCreative = null;
 
     //region ==================== Listener implementation
@@ -113,15 +118,6 @@ public class BannerView extends FrameLayout {
                 return;
             }
             bannerViewListener.onAdLoaded(BannerView.this);
-        }
-
-        private boolean life360DidRenderBid(BidResponse bidResponse) {
-            if (bidResponse instanceof Life360BidResponse) {
-                Life360AdType adType = Life360BidExt.getLife360AdType(bidResponse.getWinningBid());
-                // Life360 rendering not used for type STANDARD_DISPLAY
-                return adType != Life360AdType.STANDARD_DISPLAY;
-            }
-            return false;
         }
 
         @Override
@@ -219,8 +215,8 @@ public class BannerView extends FrameLayout {
         @Override
         public void onSdkWin(@Nullable BidResponse sdkBidResponse) {
             markPrimaryAdRequestFinished();
-
             winningBid = sdkBidResponse;
+            setAdServerWinner(winningBid == nativoServer.getLife360BidResponse() ? AdServerType.LIFE360 : AdServerType.PREBID);
             AdException parsedException = RenderingExceptionParser.getPrebidException(sdkBidResponse, prebidException);
             if (parsedException != null) {
                 notifyErrorListener(parsedException);
@@ -233,7 +229,7 @@ public class BannerView extends FrameLayout {
         @Override
         public void onAdServerWin(View view) {
             markPrimaryAdRequestFinished();
-
+            setAdServerWinner(AdServerType.GAM);
             notifyAdLoadedListener();
             displayAdServerView(view);
         }
@@ -244,10 +240,11 @@ public class BannerView extends FrameLayout {
         @Override
         public void onAdFailed(AdException gamException) {
             markPrimaryAdRequestFinished();
-
             winningBid = nativoServer.decideWinner(bidResponse);
             boolean prebidAlsoWithoutAd = RenderingExceptionParser.isBidInvalid(winningBid);
             if (prebidAlsoWithoutAd) {
+                // Nobody actually served an impression: GAM failed and there's no valid fallback bid either.
+                setAdServerWinner(null);
                 AdException parsedException = RenderingExceptionParser.getPrebidException(winningBid, prebidException);
                 String prebidStatus = parsedException != null ? parsedException.getMessage() : "Unknown";
                 notifyErrorListener(new AdException(AdException.FAILED_TO_LOAD_BIDS, "GAM status: \"" + gamException.getMessage() + "\". Prebid status: \"" + prebidStatus + "\""));
@@ -274,7 +271,7 @@ public class BannerView extends FrameLayout {
     //endregion ==================== Listener implementation
 
     /**
-     * Instantiates an BannerView with the ad details as an attribute.
+     * Instantiates a BannerView with the ad details as an attribute.
      *
      * @param attrs includes:
      *              <p>
@@ -295,7 +292,7 @@ public class BannerView extends FrameLayout {
     }
 
     /**
-     * Instantiates an BannerView for the given configId and adSize.
+     * Instantiates a BannerView for the given configId and adSize.
      */
     public BannerView(
         Context context,
@@ -311,7 +308,7 @@ public class BannerView extends FrameLayout {
     }
 
     /**
-     * Instantiates an BannerView for GAM prebid integration.
+     * Instantiates a BannerView for GAM prebid integration.
      */
     public BannerView(
         Context context,
@@ -488,6 +485,18 @@ public class BannerView extends FrameLayout {
         return adUnitConfig.getGpid();
     }
 
+    /**
+     * Which ad server actually served the last impression, or null before the first auction resolves.
+     */
+    @Nullable
+    public AdServerType getAdServerWinner() {
+        return adServer;
+    }
+
+    private void setAdServerWinner(@Nullable AdServerType adServer) {
+        this.adServer = adServer;
+    }
+
     //endregion ==================== getters and setters
 
     private void reflectAttrs(AttributeSet attrs) {
@@ -607,7 +616,16 @@ public class BannerView extends FrameLayout {
         }
     }
 
-        /**
+    private boolean life360DidRenderBid(BidResponse bidResponse) {
+        if (bidResponse instanceof Life360BidResponse) {
+            Life360AdType adType = Life360BidExt.getLife360AdType(bidResponse.getWinningBid());
+            // Life360 rendering not used for type STANDARD_DISPLAY
+            return adType != Life360AdType.STANDARD_DISPLAY;
+        }
+        return false;
+    }
+
+    /**
      * Returns the winning bid response. This can be either a Prebid bid or a Life360 bid,
      * depending on which won the auction.
      *

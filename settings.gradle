@@ -13,6 +13,7 @@ pluginManagement {
         id("org.jetbrains.kotlin.android") version providers.gradleProperty("kotlin.version")
         id("org.jetbrains.kotlin.jvm") version providers.gradleProperty("kotlin.version")
         id("org.jetbrains.kotlin.plugin.compose") version providers.gradleProperty("kotlin.version")
+        id("org.jetbrains.dokka-javadoc") version "2.2.0"
     }
 }
 
@@ -22,6 +23,7 @@ plugins {
     id("org.jetbrains.kotlin.android") apply false
     id("org.jetbrains.kotlin.jvm") apply false
     id("org.jetbrains.kotlin.plugin.compose") apply false
+    id("org.jetbrains.dokka-javadoc") apply false
 }
 
 dependencyResolutionManagement {
@@ -53,6 +55,7 @@ include ':PrebidMobile-gamEventHandlers'
 include ':PrebidMobile-nextGenEventHandlers'
 include ':PrebidMobile-admobAdapters'
 include ':PrebidMobile-maxAdapters'
+include ':Life360AdsSDK-appHarbrAdapter'
 include ':test-utils'
 include ':omsdk-android'
 
@@ -72,6 +75,7 @@ project(':PrebidMobile-core').projectDir = new File('PrebidMobile/PrebidMobile-c
 project(':PrebidMobile-gamEventHandlers').projectDir = new File('PrebidMobile/PrebidMobile-gamEventHandlers')
 project(':PrebidMobile-admobAdapters').projectDir = new File('PrebidMobile/PrebidMobile-admobAdapters')
 project(':PrebidMobile-maxAdapters').projectDir = new File('PrebidMobile/PrebidMobile-maxAdapters')
+project(':Life360AdsSDK-appHarbrAdapter').projectDir = new File('PrebidMobile/Life360AdsSDK-appHarbrAdapter')
 project(':omsdk-android').projectDir = new File('PrebidMobile/omsdk-android')
 project(':test-utils').projectDir = new File('PrebidMobile/test-utils')
 

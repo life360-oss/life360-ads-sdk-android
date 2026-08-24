@@ -15,6 +15,7 @@ promotes the deployment to `VALIDATED` for manual publish.
 | PrebidMobile-gamEventHandlers | `com.life360:life360-ads-gam-event-handlers`       | jar |
 | PrebidMobile-admobAdapters    | `com.life360:life360-ads-admob-adapters`           | jar |
 | PrebidMobile-maxAdapters      | `com.life360:life360-ads-max-adapters`             | jar |
+| Life360AdsSDK-appHarbrAdapter | `com.life360:life360-ads-appharbr-adapter`       | jar |
 | omsdk-android (vendored) | `com.life360:life360-ads-open-measurement-sdk`          | jar |
 
 ## One-time environment setup
@@ -85,8 +86,11 @@ version-bump step — no force-push to `develop`, no version-only PR:
   `org.prebid.mobile.**` → `com.life360.ads.**`, and emits AAR / JAR / sources / javadoc /
   POM into `generated/` under the `Life360AdsSDK-*` naming.
 - `scripts/Maven/deployPrebidMobile-life.sh` — **canonical full release**: builds, then signs +
-  deploys all five modules **and** the OM SDK to Central, then finalizes.
-- `scripts/Maven/deployPrebidMobile.sh` — deploys only the five SDK modules (no OM SDK).
+  deploys the six SDK modules to Central, then finalizes. The vendored OM SDK is *not* deployed here
+  (it versions independently, and Central rejects re-deploying a released version) — use
+  `deployOpenMeasurement.sh` when `omSdkVersion` changes.
+- `scripts/Maven/deployPrebidMobile.sh` — secondary script; also covers the dormant
+  `PrebidMobile-nextGenEventHandlers`.
 - `scripts/Maven/deployOpenMeasurement.sh` — deploys only the vendored OM SDK. Use when
   `omSdkVersion` changes independently of an SDK release.
 

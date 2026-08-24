@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Test
 import org.prebid.mobile.configuration.AdUnitConfiguration
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse
@@ -155,6 +156,127 @@ class Life360BidResponseTest {
         val response = life360BidResponse(json)
 
         assertNull(response.winningBid)
+    }
+
+    @Test
+    fun responseJson_viaABidResponseTypedReference_stillReturnsThePatchedJson() {
+        // Declared as the base type on purpose: proves virtual dispatch, not the static type, decides
+        // which override runs — a consumer holding a plain BidResponse reference still gets the patch.
+        val response: BidResponse = life360BidResponse(singleBidJson(price = 2.75, width = 320, height = 50))
+
+        val targeting = winningBidTargetingIn(response.responseJson)
+
+        assertEquals("nativo", targeting?.optString("hb_bidder"))
+    }
+
+    @Test
+    fun responseJson_returnsTheSameObjectEveryCall_ratherThanACopy() {
+        // The fix is applied by mutating this one object in init, not by returning a patched copy —
+        // so any two calls, from any reference type, must resolve to the exact same instance.
+        val response = life360BidResponse(singleBidJson(price = 1.0))
+
+        assertSame(response.responseJson, response.responseJson)
+    }
+
+    @Test
+    fun responseJson_includesTargetingAppliedToTheWinningBid() {
+        val response = life360BidResponse(singleBidJson(price = 2.75, width = 320, height = 50))
+
+        val targeting = winningBidTargetingIn(response.responseJson)
+
+        assertEquals("nativo", targeting?.optString("hb_bidder"))
+        assertEquals("2.75", targeting?.optString("hb_pb"))
+        assertEquals("320x50", targeting?.optString("hb_size"))
+        assertEquals("mobile-app", targeting?.optString("hb_env"))
+    }
+
+    @Test
+    fun responseJson_preservesTargetingKeysTheServerAlreadySet() {
+        val bid = bidJson("bid1", price = 1.0).apply {
+            getJSONObject("ext").getJSONObject("prebid").put(
+                "targeting",
+                JSONObject().put("hb_cache_id", "cache-123")
+            )
+        }
+        val response = life360BidResponse(responseJson(JSONArray().put(bid)))
+
+        val targeting = winningBidTargetingIn(response.responseJson)
+
+        assertEquals("cache-123", targeting?.optString("hb_cache_id"))
+        assertEquals("nativo", targeting?.optString("hb_bidder"))
+    }
+
+    @Test
+    fun responseJson_patchesTheWinningBidWhenItIsNotTheFirstSeatbidOrBid() {
+        val seatA = JSONObject().put("seat", "a").put("bid", JSONArray().put(bidJson("a1", 1.0)))
+        val seatB = JSONObject().put("seat", "b").put(
+            "bid",
+            JSONArray().put(bidJson("b1", 2.0)).put(bidJson("b2", 4.0))
+        )
+        val json = JSONObject()
+            .put("id", "resp1")
+            .put("seatbid", JSONArray().put(seatA).put(seatB))
+            .toString()
+        val response = life360BidResponse(json)
+
+        val patchedSeatB = response.responseJson.getJSONArray("seatbid").getJSONObject(1)
+        val patchedA1Targeting = patchedSeatB.getJSONArray("bid").getJSONObject(0)
+            .getJSONObject("ext").getJSONObject("prebid").optJSONObject("targeting")
+        val patchedB2Targeting = patchedSeatB.getJSONArray("bid").getJSONObject(1)
+            .getJSONObject("ext").getJSONObject("prebid").getJSONObject("targeting")
+
+        // Only the actual winning bid (b2, price 4.0) gets patched, not another bid at the same index.
+        assertNull(patchedA1Targeting?.opt("hb_bidder"))
+        assertEquals("nativo", patchedB2Targeting.optString("hb_bidder"))
+    }
+
+    @Test
+    fun responseJson_whenNoWinningBid_returnsTheUnmodifiedServerResponse() {
+        val json = JSONObject().put("id", "resp1").put("seatbid", JSONArray()).toString()
+
+        val response = life360BidResponse(json)
+
+        assertEquals("resp1", response.responseJson.optString("id"))
+        assertEquals(0, response.responseJson.getJSONArray("seatbid").length())
+    }
+
+    @Test
+    fun winningBidJson_includesTargetingAppliedToTheWinningBid() {
+        val response = life360BidResponse(singleBidJson(price = 2.75, width = 320, height = 50))
+
+        val targeting = JSONObject(response.winningBidJson!!)
+            .getJSONObject("ext").getJSONObject("prebid").getJSONObject("targeting")
+
+        assertEquals("nativo", targeting.optString("hb_bidder"))
+        assertEquals("2.75", targeting.optString("hb_pb"))
+        assertEquals("320x50", targeting.optString("hb_size"))
+    }
+
+    @Test
+    fun winningBidJson_isScopedToJustTheWinningBid_notTheFullResponse() {
+        val low = bidJson("low", price = 0.5)
+        val high = bidJson("high", price = 2.75)
+        val response = life360BidResponse(responseJson(JSONArray().put(low).put(high)))
+
+        val winningBidJson = JSONObject(response.winningBidJson!!)
+
+        assertEquals("high", winningBidJson.optString("id"))
+        assertFalse(winningBidJson.has("seatbid"))
+    }
+
+    @Test
+    fun winningBidJson_whenNoWinningBid_doesNotThrow() {
+        val json = JSONObject().put("id", "resp1").put("seatbid", JSONArray()).toString()
+
+        val response = life360BidResponse(json)
+
+        assertEquals(json, response.winningBidJson)
+    }
+
+    private fun winningBidTargetingIn(responseJson: JSONObject): JSONObject? {
+        val seatbid = responseJson.getJSONArray("seatbid").getJSONObject(0)
+        val bid = seatbid.getJSONArray("bid").getJSONObject(0)
+        return bid.getJSONObject("ext").getJSONObject("prebid").optJSONObject("targeting")
     }
 
     private fun life360BidResponse(json: String): Life360BidResponse {

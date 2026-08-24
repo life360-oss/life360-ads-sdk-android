@@ -1,0 +1,48 @@
+// Unlike the Java-only adapter modules, this one is Kotlin, so it needs the Kotlin plugin — without it
+// AGP silently ignores every .kt file and publishes an empty artifact.
+apply plugin: 'org.jetbrains.kotlin.android'
+apply from: '../android.gradle'
+
+android {
+    namespace "com.life360.ads.appharbr"
+    defaultConfig {
+        // AppHarbr's AAR declares minSdkVersion 22, which is higher than the SDK core's 19.
+        minSdkVersion 22
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    testOptions {
+        unitTests.all {
+            jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+            systemProperty 'robolectric.invokedynamic.enable', 'false'
+        }
+    }
+}
+
+dependencies {
+    implementation project(":PrebidMobile")
+    implementation libs.kotlin.stdlib
+
+    // Compiled against AppHarbr 2.38.1, which is only distributed as a file — libs/ holds the classes
+    // jar unpacked from their Ah-core-sdk-release-2.38.1.aar (see libs/README.md). AGP rejects a local
+    // .aar dependency inside a library module, hence the jar.
+    //
+    // compileOnly, so AppHarbr is neither packaged into our artifact nor placed on a consumer's runtime
+    // classpath by us: consumers get it from the appharbr-android-sdk dependency this module's POM
+    // declares (scripts/Maven/Life360AdsSDK-appHarbrAdapter-pom.xml), or from their own local drop.
+    // AppHarbr's Life360 adapter, needed by initAdQualityService(). It has no Maven coordinate at all,
+    // so unlike the core SDK the POM cannot declare it — a consumer places the .aar in their own app.
+    compileOnly files(
+            'libs/appharbr-android-sdk-2.38.1.jar',
+            'libs/appharbr-life360-adapter-2.38.0.1.jar',
+    )
+    testImplementation files(
+            'libs/appharbr-android-sdk-2.38.1.jar',
+            'libs/appharbr-life360-adapter-2.38.0.1.jar',
+    )
+
+    testImplementation(project(":test-utils"))
+    testImplementation(libs.bundles.test.libraries)
+}

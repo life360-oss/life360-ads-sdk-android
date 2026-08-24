@@ -518,4 +518,26 @@ public class AdViewManagerTest {
         verify(mockCreative).createOmAdSession();
         verify(mockAdViewListener).adLoaded(any(AdDetails.class));
     }
+
+    @Test
+    public void whenFetchedSuccessful_CreativeViewAvailableBeforeDisplay() {
+        Transaction mockTransaction = mock(Transaction.class);
+        CreativeFactory mockFactory = mock(CreativeFactory.class);
+        AbstractCreative mockCreative = mock(AbstractCreative.class);
+        View mockCreativeView = mock(View.class);
+        when(mockCreative.getCreativeView()).thenReturn(mockCreativeView);
+        when(mockFactory.getCreative()).thenReturn(mockCreative);
+        List<CreativeFactory> creativeFactories = new ArrayList<>();
+        creativeFactories.add(mockFactory);
+        when(mockTransaction.getTransactionState()).thenReturn("state");
+        when(mockTransaction.getCreativeFactories()).thenReturn(creativeFactories);
+
+        assertNull(adViewManager.getCurrentCreativeView());
+
+        adViewManager.onFetchingCompleted(mockTransaction);
+
+        // The creative resolves before it is displayed, so it is reachable without a viewReadyForImmediateDisplay.
+        verify(mockAdViewListener, never()).viewReadyForImmediateDisplay(any(View.class));
+        assertEquals(mockCreativeView, adViewManager.getCurrentCreativeView());
+    }
 }

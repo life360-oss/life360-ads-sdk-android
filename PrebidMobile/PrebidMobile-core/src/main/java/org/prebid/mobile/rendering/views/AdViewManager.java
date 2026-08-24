@@ -21,6 +21,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import androidx.annotation.Nullable;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.data.AdFormat;
 import org.prebid.mobile.api.exceptions.AdException;
@@ -213,6 +214,14 @@ public class AdViewManager implements CreativeViewListener, TransactionManagerLi
 
     public AdUnitConfiguration getAdConfiguration() {
         return adConfiguration;
+    }
+
+    /**
+     * Added this so AppHarbr can get access to inner web view before it is injected into view
+     */
+    @Nullable
+    public View getCurrentCreativeView() {
+        return currentCreative != null ? currentCreative.getCreativeView() : null;
     }
 
     public boolean isAutoDisplayOnLoad() {
