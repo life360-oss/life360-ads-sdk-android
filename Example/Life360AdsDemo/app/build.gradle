@@ -1,6 +1,5 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
-apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
     namespace "com.life360"
@@ -21,9 +20,21 @@ android {
     }
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_17.toString()
+        // A few non-Compose AndroidX -ktx artifacts (core-ktx, lifecycle-runtime-ktx) ship newer
+        // releases built with Kotlin 2.x's metadata format even though their API surface here is
+        // plain classes/extension functions with no 2.x-only language constructs, so this module's
+        // 1.8.0 compiler can safely consume them.
+        freeCompilerArgs += ["-Xskip-metadata-version-check"]
     }
     buildFeatures {
         compose true
+    }
+    composeOptions {
+        // The Compose compiler matching kotlin.version=1.8.0. Google stopped publishing this
+        // artifact after Compose Compiler 1.5.4/Kotlin 1.9.20, when the compiler moved into the
+        // Kotlin repo itself (org.jetbrains.kotlin.plugin.compose, Kotlin 2.0+ only) — so this
+        // module is capped at this Compose/Kotlin generation.
+        kotlinCompilerExtensionVersion = "1.4.0"
     }
 }
 

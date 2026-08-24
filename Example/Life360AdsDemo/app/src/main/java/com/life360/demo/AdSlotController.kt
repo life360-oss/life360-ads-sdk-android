@@ -10,12 +10,12 @@ import androidx.compose.runtime.setValue
 import com.life360.ads.api.exceptions.AdException
 import com.life360.ads.api.rendering.BannerView
 import com.life360.ads.api.rendering.listeners.BannerVideoListener
-import com.life360.ads.api.rendering.listeners.NativoBannerViewListener
+import com.life360.ads.api.rendering.listeners.Life360BannerViewListener
 
 /** What the slot has to show, published to Compose. */
 sealed interface AdSlotState {
-    data object Idle : AdSlotState
-    data object Loading : AdSlotState
+    object Idle : AdSlotState
+    object Loading : AdSlotState
     data class Loaded(val demandSource: String, val creativeSize: String?) : AdSlotState
     data class Failed(val message: String?) : AdSlotState
 }
@@ -77,15 +77,15 @@ class AdSlotController(
         state = AdSlotState.Idle
     }
 
-    private val bannerListener = object : NativoBannerViewListener {
+    private val bannerListener = object : Life360BannerViewListener {
         override fun onAdLoaded(bannerView: BannerView) {
             record("onAdLoaded")
             state = loadedState(bannerView)
         }
 
-        // Fires instead of onAdLoaded when Nativo both wins and renders the creative itself.
-        override fun onNativoAdLoaded(bannerView: BannerView) {
-            record("onNativoAdLoaded")
+        // Fires instead of onAdLoaded when Life360 both wins and renders the creative itself.
+        override fun onLife360AdLoaded(bannerView: BannerView) {
+            record("onLife360AdLoaded")
             state = loadedState(bannerView)
         }
 

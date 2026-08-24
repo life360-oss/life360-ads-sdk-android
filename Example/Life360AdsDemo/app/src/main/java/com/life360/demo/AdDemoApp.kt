@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,6 +31,10 @@ import java.util.Locale
 // A fixed window of callbacks, so the panel's height doesn't shift as events arrive.
 private const val VISIBLE_EVENTS = 5
 
+// Material3 1.0.1 (kept in step with Kotlin 1.8.0's Compose compiler) predates the tonal
+// surfaceContainer* roles, so surfaceVariant stands in for "a shade off background."
+private val DEMO_AD_FORMATS = DemoAdFormat.values().toList()
+
 /**
  * Three ad formats behind a bottom tab bar, each in its own scrolling feed.
  *
@@ -37,6 +42,7 @@ private const val VISIBLE_EVENTS = 5
  * fire *while* the slot is moving through the viewport, so they have to stay readable when the ad
  * itself is off screen.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdDemoApp(
     controllers: Map<DemoAdFormat, AdSlotController>,
@@ -45,7 +51,7 @@ fun AdDemoApp(
     var selected by remember { mutableStateOf(DemoAdFormat.BANNER) }
 
     // Hoisted above the tab switch so a slot left scrolled off screen is still there on return.
-    val scrollStates = remember { DemoAdFormat.entries.associateWith { ScrollState(initial = 0) } }
+    val scrollStates = remember { DEMO_AD_FORMATS.associateWith { ScrollState(initial = 0) } }
     val controller = controllers.getValue(selected)
 
     // Requested on first visit rather than all three up front, so each slot's bid request and OM
@@ -69,7 +75,7 @@ fun AdDemoApp(
 @Composable
 private fun SlotStatusPanel(controller: AdSlotController, sdkReady: Boolean) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
@@ -146,7 +152,7 @@ private fun EventLine(text: String) {
 @Composable
 private fun FormatTabBar(selected: DemoAdFormat, onSelect: (DemoAdFormat) -> Unit) {
     NavigationBar {
-        DemoAdFormat.entries.forEach { format ->
+        DEMO_AD_FORMATS.forEach { format ->
             NavigationBarItem(
                 selected = format == selected,
                 onClick = { onSelect(format) },

@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableStateOf
 import com.life360.ads.Life360Ads
 import com.life360.ads.PrebidMobile
@@ -34,7 +33,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        controllers = DemoAdFormat.entries.associateWith { AdSlotController(it, this) }
+        controllers = DemoAdFormat.values().associateWith { AdSlotController(it, this) }
 
         // The SDK must know the account id and server before any BannerView is created, since
         // BannerView reads the configured host during its own init. Initialization is asynchronous;
@@ -47,7 +46,6 @@ class MainActivity : ComponentActivity() {
 
         logSdkVersions()
 
-        enableEdgeToEdge()
         setContent {
             Life360AdsDemoTheme {
                 AdDemoApp(controllers = controllers, sdkReady = sdkReady.value)

@@ -1,8 +1,11 @@
 [versions]
-androidx-activity-compose = "1.8.0"
+# Pinned to the last Compose stack whose artifacts were themselves compiled with Kotlin 1.8.x
+# metadata (androidx.compose.compiler:compiler 1.4.0, the compiler matching kotlin.version=1.8.0).
+# Anything newer flips to Kotlin-2.x metadata that a 1.8.0 compiler can't read.
+androidx-activity-compose = "1.6.1"
 androidx-annotation = "1.9.1"
 androidx-appcompat = "1.3.0"
-androidx-compose-bom = "2026.02.01"
+androidx-compose-bom = "2023.01.00"
 androidx-constraintlayout = "2.1.4"
 androidx-espresso = "3.4.0"
 androidx-lifecycle-viewmodel-ktx = "2.5.1"
@@ -41,7 +44,7 @@ segmentedcontrol = "1.1.3"
 core-ktx = "1.17.0"
 next-gen-sdk = "1.2.1"
 coroutines-test = "1.6"
-life360-ads-sdk = "1.3.2"
+life360-ads-sdk = "1.4.0"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity-compose" }
