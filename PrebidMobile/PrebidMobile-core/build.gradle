@@ -1,6 +1,5 @@
 apply plugin: 'org.jetbrains.kotlin.android'
 apply from: '../android.gradle'
-apply from: '../publisher.gradle'
 
 android {
     namespace "com.life360.ads.core"
