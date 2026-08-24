@@ -1,21 +1,26 @@
 package com.life360.demo
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,23 +29,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.util.Locale
 
-// A fixed window of callbacks, so the panel's height doesn't shift as events arrive.
-private const val VISIBLE_EVENTS = 5
-
-// Material3 1.0.1 (kept in step with Kotlin 1.8.0's Compose compiler) predates the tonal
-// surfaceContainer* roles, so surfaceVariant stands in for "a shade off background."
 private val DEMO_AD_FORMATS = DemoAdFormat.values().toList()
 
+// Hardcoded rather than theme-driven: the demo is pinned to a fixed light look regardless of the
+// device's dynamic color scheme, to match the iOS counterpart's flat white bars and system-blue tint.
+private val BAR_BACKGROUND = Color.White
+private val TAB_BAR_TRACK = Color(0xFFEDEDED)
+private val TAB_SELECTED_TINT = Color(0xFF3478F6)
+private val TAB_UNSELECTED_TINT = Color(0xFF1C1C1E)
+
 /**
- * Three ad formats behind a bottom tab bar, each in its own scrolling feed.
- *
- * The status panel is pinned outside the scroll container on purpose: the callbacks worth watching
- * fire *while* the slot is moving through the viewport, so they have to stay readable when the ad
- * itself is off screen.
+ * Three ad formats behind a floating tab bar, each in its own scrolling feed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,8 +66,9 @@ fun AdDemoApp(
     }
 
     Scaffold(
-        topBar = { SlotStatusPanel(controller, sdkReady) },
+        topBar = { DemoTopBar(controller, sdkReady) },
         bottomBar = { FormatTabBar(selected, onSelect = { selected = it }) },
+        containerColor = Color.White,
     ) { innerPadding ->
         AdFeed(
             controller = controller,
@@ -72,93 +78,75 @@ fun AdDemoApp(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SlotStatusPanel(controller: AdSlotController, sdkReady: Boolean) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "${controller.format.title} ad",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = controller::reload, enabled = sdkReady) {
-                    Text("Reload")
-                }
-            }
+private fun DemoTopBar(controller: AdSlotController, sdkReady: Boolean) {
+    TopAppBar(
+        modifier = Modifier.shadow(elevation = 4.dp),
+        title = {
             Text(
-                text = describeStatus(controller.state, sdkReady),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = controller.format.title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
             )
-            EventLogLines(controller.events)
-        }
-    }
-}
-
-private fun describeStatus(state: AdSlotState, sdkReady: Boolean): String = when {
-    !sdkReady -> "Initializing ads SDK…"
-    state is AdSlotState.Idle -> "Idle"
-    state is AdSlotState.Loading -> "Requesting ad…"
-    state is AdSlotState.Loaded -> listOfNotNull(
-        "Loaded",
-        state.demandSource,
-        state.creativeSize,
-    ).joinToString(" · ")
-    state is AdSlotState.Failed -> "No ad · ${state.message ?: "unknown error"}"
-    else -> "Idle"
-}
-
-@Composable
-private fun EventLogLines(log: AdEventLog) {
-    val visible = log.recent.takeLast(VISIBLE_EVENTS)
-    Column(modifier = Modifier.heightIn(min = (VISIBLE_EVENTS * 15).dp)) {
-        if (visible.isEmpty()) {
-            EventLine("(no SDK callbacks yet)")
-            return@Column
-        }
-        visible.forEach { entry ->
-            EventLine(
-                String.format(
-                    Locale.US,
-                    "+%5.2fs  %s%s",
-                    entry.elapsedMs / 1000f,
-                    entry.name,
-                    entry.detail?.let { " — $it" } ?: "",
-                )
-            )
-        }
-    }
-}
-
-@Composable
-private fun EventLine(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        fontFamily = FontFamily.Monospace,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        },
+        actions = {
+            IconButton(onClick = controller::reload, enabled = sdkReady) {
+                Icon(Icons.Filled.Refresh, contentDescription = "Reload ad")
+            }
+        },
+        colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = BAR_BACKGROUND),
     )
 }
 
+/**
+ * A floating, pill-shaped tab bar with a rounded highlight behind the selected item — the closest
+ * Material3 approximation of the iOS tab bar's default "Liquid Glass" floating capsule style.
+ */
 @Composable
 private fun FormatTabBar(selected: DemoAdFormat, onSelect: (DemoAdFormat) -> Unit) {
-    NavigationBar {
-        DEMO_AD_FORMATS.forEach { format ->
-            NavigationBarItem(
-                selected = format == selected,
-                onClick = { onSelect(format) },
-                icon = { Text(format.glyph, style = MaterialTheme.typography.titleMedium) },
-                label = { Text(format.title) },
-            )
+    Surface(
+        color = TAB_BAR_TRACK,
+        shape = RoundedCornerShape(28.dp),
+        shadowElevation = 4.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(6.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            DEMO_AD_FORMATS.forEach { format ->
+                TabItem(
+                    format = format,
+                    isSelected = format == selected,
+                    onClick = { onSelect(format) },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun RowScope.TabItem(
+    format: DemoAdFormat,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val tint = if (isSelected) TAB_SELECTED_TINT else TAB_UNSELECTED_TINT
+    val background = if (isSelected) BAR_BACKGROUND else Color.Transparent
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(20.dp))
+            .background(background)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Icon(format.icon, contentDescription = format.title, tint = tint)
+        Text(text = format.title, style = MaterialTheme.typography.labelSmall, color = tint)
     }
 }
