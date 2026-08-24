@@ -1,4 +1,6 @@
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'org.jetbrains.dokka-javadoc'
 apply plugin: 'maven-publish'
 
 // Publish-time relocation: org.prebid.mobile.** → com.life360.ads.**
@@ -54,5 +56,13 @@ android {
         exclude 'META-INF/NOTICE'
         exclude 'META-INF/INDEX.LIST'
         exclude 'META-INF/LICENSE'
+    }
+
+    publishing {
+        multipleVariants {
+            withSourcesJar()
+            withJavadocJar()
+            allVariants()
+        }
     }
 }
