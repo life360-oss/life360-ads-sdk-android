@@ -21,9 +21,11 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.jetbrains.annotations.NotNull;
+import com.life360.ads.utils.Life360Utils;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.rendering.loading.FileDownloadTask;
+import org.prebid.mobile.rendering.mraid.methods.network.GetOriginalUrlTask;
 import org.prebid.mobile.rendering.networking.exception.BaseExceptionHolder;
 import org.prebid.mobile.api.exceptions.NoBidException;
 import org.prebid.mobile.rendering.utils.helpers.Utils;
@@ -351,6 +353,11 @@ public class BaseNetworkTask
                 }
                 redirected = true;
                 connection = target.openConnection();
+                if (this instanceof GetOriginalUrlTask) {
+                    // Click resolution ends on a landing page, where an unidentified request is the
+                    // one bot mitigation rejects.
+                    Life360Utils.identify(connection);
+                }
                 redirects++;
             }
         }

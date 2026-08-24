@@ -5,9 +5,25 @@ import android.graphics.Canvas
 import android.os.SystemClock
 import android.view.View
 import android.widget.ImageView
+import org.prebid.mobile.rendering.utils.helpers.AppInfoManager
+import java.net.URLConnection
 import java.util.concurrent.atomic.AtomicLong
 
 object Life360Utils {
+
+    /**
+     * Identifies an outgoing request as coming from this SDK.
+     *
+     * A connection carries no request properties until they are set, and one opened to follow a
+     * redirect starts empty however the request that led there was configured. Bot mitigation on an
+     * advertiser's landing page answers an unidentified request by closing the connection, which
+     * surfaces as an IOException and costs whatever the request was for.
+     */
+    @JvmStatic
+    fun identify(connection: URLConnection) {
+        connection.setRequestProperty("User-Agent", AppInfoManager.getUserAgent())
+    }
+
     fun debounceAction(intervalMs: Long, action: () -> Unit): () -> Unit {
         val lastCall = AtomicLong(0L)
         return {

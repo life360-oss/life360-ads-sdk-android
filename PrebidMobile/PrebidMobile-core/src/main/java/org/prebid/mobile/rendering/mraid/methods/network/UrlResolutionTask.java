@@ -20,6 +20,7 @@ import android.os.AsyncTask;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import com.life360.ads.utils.Life360Utils;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
 
@@ -86,6 +87,7 @@ public class UrlResolutionTask extends AsyncTask<String, Void, String> {
         try {
             httpUrlConnection = (HttpURLConnection) url.openConnection();
             httpUrlConnection.setInstanceFollowRedirects(false);
+            Life360Utils.identify(httpUrlConnection);
 
             return resolveRedirectLocation(urlString, httpUrlConnection);
         }
