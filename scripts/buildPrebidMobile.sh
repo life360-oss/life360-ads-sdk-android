@@ -174,11 +174,11 @@ for n in ${!modules[@]}; do
 
     # copy sources into a result direcotory
     SOURCES_PATH_ABSOLUTE="${projectPaths[$n]}/$SOURCES_PATH"
-    mv $SOURCES_PATH_ABSOLUTE/release-sources.jar $OUTDIR/${modules[$n]}-sources.jar
+    mv $SOURCES_PATH_ABSOLUTE/release-sources.jar $OUTDIR/${OUTPUT_NAME}-sources.jar
 
     # copy javadoc into a result direcotory
     JAVADOC_PATH_ABSOLUTE="${projectPaths[$n]}/$JAVADOC_PATH"
-    mv $JAVADOC_PATH_ABSOLUTE/release-javadoc.jar $OUTDIR/${modules[$n]}-javadoc.jar
+    mv $JAVADOC_PATH_ABSOLUTE/release-javadoc.jar $OUTDIR/${OUTPUT_NAME}-javadoc.jar
     # clean tmp dir
     rm -r $TEMPDIR
   fi
