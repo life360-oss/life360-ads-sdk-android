@@ -175,7 +175,8 @@ for n in ${!modules[@]}; do
     BUILD_LIBS_PATH_ABSOLUTE="${projectPaths[$n]}/$BUILD_LIBS_PATH"
     cp -a $BUILD_LIBS_PATH_ABSOLUTE/. $OUTDIR/
     for f in "$OUTDIR"/${modules[$n]}-*.jar; do
-      [ -f "$f" ] && mv "$f" "${f/${modules[$n]}/${OUTPUT_NAME}}"
+      target="${f/${modules[$n]}/${OUTPUT_NAME}}"
+      [ -f "$f" ] && [ "$f" != "$target" ] && mv "$f" "$target"
     done
     # clean tmp dir
     rm -r $TEMPDIR
