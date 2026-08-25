@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
+import org.prebid.mobile.rendering.utils.helpers.AppInfoManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -86,6 +87,7 @@ public class UrlResolutionTask extends AsyncTask<String, Void, String> {
         try {
             httpUrlConnection = (HttpURLConnection) url.openConnection();
             httpUrlConnection.setInstanceFollowRedirects(false);
+            httpUrlConnection.setRequestProperty("User-Agent", AppInfoManager.getUserAgent());
 
             return resolveRedirectLocation(urlString, httpUrlConnection);
         }
