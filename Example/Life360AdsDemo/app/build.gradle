@@ -6,7 +6,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.life360.android.safetymapqa"
+        applicationId "com.nativo.mraidandroidapp"
         minSdkVersion 24
         targetSdkVersion 36
         versionCode 1
@@ -40,6 +40,9 @@ android {
 
 dependencies {
     implementation libs.life360.ads.sdk
+    // Loads native ads' remote icon/main images — a plain Java library, so it carries none of the
+    // Kotlin-metadata compatibility risk the comment above flags for Compose artifacts.
+    implementation libs.glide
 
     implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.activity.compose

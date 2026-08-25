@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private val DEMO_AD_FORMATS = DemoAdFormat.values().toList()
+private val DEMO_AD_FORMATS = AdConfiguration.values().toList()
 
 // Hardcoded rather than theme-driven: the demo is pinned to a fixed light look regardless of the
 // device's dynamic color scheme, to match the iOS counterpart's flat white bars and system-blue tint.
@@ -50,10 +50,10 @@ private val TAB_UNSELECTED_TINT = Color(0xFF1C1C1E)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdDemoApp(
-    controllers: Map<DemoAdFormat, AdSlotController>,
+    controllers: Map<AdConfiguration, AdSlotController>,
     sdkReady: Boolean,
 ) {
-    var selected by remember { mutableStateOf(DemoAdFormat.BANNER) }
+    var selected by remember { mutableStateOf(AdConfiguration.BANNER) }
 
     // Hoisted above the tab switch so a slot left scrolled off screen is still there on return.
     val scrollStates = remember { DEMO_AD_FORMATS.associateWith { ScrollState(initial = 0) } }
@@ -85,7 +85,7 @@ private fun DemoTopBar(controller: AdSlotController, sdkReady: Boolean) {
         modifier = Modifier.shadow(elevation = 4.dp),
         title = {
             Text(
-                text = controller.format.title,
+                text = controller.config.title,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -104,7 +104,7 @@ private fun DemoTopBar(controller: AdSlotController, sdkReady: Boolean) {
  * Material3 approximation of the iOS tab bar's default "Liquid Glass" floating capsule style.
  */
 @Composable
-private fun FormatTabBar(selected: DemoAdFormat, onSelect: (DemoAdFormat) -> Unit) {
+private fun FormatTabBar(selected: AdConfiguration, onSelect: (AdConfiguration) -> Unit) {
     Surface(
         color = TAB_BAR_TRACK,
         shape = RoundedCornerShape(28.dp),
@@ -130,7 +130,7 @@ private fun FormatTabBar(selected: DemoAdFormat, onSelect: (DemoAdFormat) -> Uni
 
 @Composable
 private fun RowScope.TabItem(
-    format: DemoAdFormat,
+    format: AdConfiguration,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {

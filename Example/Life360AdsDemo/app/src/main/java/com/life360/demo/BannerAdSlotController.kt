@@ -1,6 +1,7 @@
 package com.life360.demo
 
 import android.app.Activity
+import android.content.Context
 import android.util.Log
 import android.view.ViewGroup
 import androidx.compose.runtime.Stable
@@ -9,15 +10,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.life360.ads.api.exceptions.AdException
 import com.life360.ads.api.rendering.BannerView
-import com.life360.ads.api.rendering.listeners.BannerVideoListener
 import com.life360.ads.api.rendering.listeners.Life360BannerViewListener
+import com.life360.ads.networking.Life360QueryParameterStore
 
 /** What the slot has to show, published to Compose. */
 sealed interface AdSlotState {
     object Idle : AdSlotState
     object Loading : AdSlotState
-    data class Loaded(val demandSource: String, val creativeSize: String?) : AdSlotState
+    object Loaded : AdSlotState
     data class Failed(val message: String?) : AdSlotState
+}
+
+/** Owns one tab's ad request for the lifetime of the Activity — see [BannerAdSlotController] and
+ * [NativeAdSlotController], the two shapes a request takes in this harness. */
+interface AdSlotController {
+    val config: AdConfiguration
+    val events: AdEventLog
+    val state: AdSlotState
+
+    /** Requests an ad unless this slot already has one. Safe to call on every tab visit. */
+    fun load()
+
+    /** Tears the slot down and re-requests, so a scroll-tracking run can be repeated cleanly. */
+    fun reload()
+
+    fun destroy()
 }
 
 /**
@@ -29,52 +46,67 @@ sealed interface AdSlotState {
  * making the impression counts this harness exists to check meaningless.
  */
 @Stable
-class AdSlotController(
-    val format: DemoAdFormat,
+class BannerAdSlotController(
+    override val config: AdConfiguration,
     private val activity: Activity,
-) {
-    val events = AdEventLog()
+) : AdSlotController {
+    // Only Banner and L360 Video are ever wrapped in this controller — see AdConfiguration's kdoc —
+    // so a missing configId/adSize here means a NATIVE-shaped config was passed in by mistake.
+    private val configId = requireNotNull(config.configId) { "${config.title} has no configId" }
+    private val adSize = requireNotNull(config.adSize) { "${config.title} has no adSize" }
 
-    var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
+    override val events = AdEventLog()
+
+    override var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
         private set
 
     var bannerView: BannerView? by mutableStateOf(null)
         private set
 
-    /** Requests an ad unless this slot already has one. Safe to call on every tab visit. */
-    fun load() {
+    override fun load() {
         if (bannerView != null) return
 
         events.reset()
         state = AdSlotState.Loading
 
-        val banner = BannerView(activity, format.configId, format.adSize).apply {
+        applyCustomQueryParams()
+
+        val banner = BannerView(activity, configId, adSize).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
             setBannerListener(bannerListener)
-            // Attached to every slot, not just the video one: placements are configured server-side,
-            // so a display slot serving a Nativo video creative is exactly the surprise worth seeing.
-            setBannerVideoListener(videoListener)
         }
         bannerView = banner
         banner.loadAd()
     }
 
-    /** Tears the slot down and re-requests, so a scroll-tracking run can be repeated cleanly. */
-    fun reload() {
+    override fun reload() {
         destroy()
         load()
     }
 
-    fun destroy() {
+    override fun destroy() {
         bannerView?.let { banner ->
             (banner.parent as? ViewGroup)?.removeView(banner)
             banner.destroy()
         }
         bannerView = null
         state = AdSlotState.Idle
+    }
+
+    private fun applyCustomQueryParams() {
+        if (config.customQueryParams.isEmpty()) return
+        val prefs = activity.getSharedPreferences(
+            Life360QueryParameterStore.prefsName(configId),
+            Context.MODE_PRIVATE,
+        )
+        prefs.edit()
+            .clear()
+            .apply {
+            config.customQueryParams.forEach { (key, value) -> putString(key, value) }
+        }.apply()
     }
 
     private val bannerListener = object : Life360BannerViewListener {
@@ -101,26 +133,13 @@ class AdSlotController(
         override fun onAdClosed(bannerView: BannerView) = record("onAdClosed")
     }
 
-    // onVideoPaused/onVideoResumed are driven by the SDK's visibility constraints, so scrolling the
-    // slot out of and back into the viewport is what these two are here to prove.
-    private val videoListener = object : BannerVideoListener {
-        override fun onVideoCompleted(bannerView: BannerView) = record("onVideoCompleted")
-        override fun onVideoPaused(bannerView: BannerView) = record("onVideoPaused", "left viewport")
-        override fun onVideoResumed(bannerView: BannerView) = record("onVideoResumed", "back in viewport")
-        override fun onVideoMuted(bannerView: BannerView) = record("onVideoMuted")
-        override fun onVideoUnMuted(bannerView: BannerView) = record("onVideoUnMuted")
-    }
-
     private fun loadedState(bannerView: BannerView): AdSlotState.Loaded {
         val response = bannerView.bidResponse
-        return AdSlotState.Loaded(
-            demandSource = NativoBidInspector.describeDemandSource(response),
-            creativeSize = NativoBidInspector.describeCreativeSize(response),
-        )
+        return AdSlotState.Loaded
     }
 
     private fun record(name: String, detail: String? = null) {
-        Log.d(TAG, "[${format.title}] $name${detail?.let { " — $it" } ?: ""}")
+        Log.d(TAG, "[${config.title}] $name${detail?.let { " — $it" } ?: ""}")
         events.record(name, detail)
     }
 
