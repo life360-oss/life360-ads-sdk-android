@@ -65,16 +65,16 @@ class Life360CreativeVisibilityTrackerTest {
         tracker.startVisibilityCheck(activity)
     }
 
-    private fun preDrawTracker(): CreativeVisibilityTracker = WhiteBox.getInternalState(tracker, "preDrawTracker")
+    private fun originalVisibilityTracker(): CreativeVisibilityTracker = WhiteBox.getInternalState(tracker, "originalVisibilityTracker")
 
-    private fun isPreDrawTrackerScheduled(): Boolean =
-        WhiteBox.getInternalState(preDrawTracker(), "isVisibilityScheduled")
+    private fun isOriginalVisibilityTrackerScheduled(): Boolean =
+        WhiteBox.getInternalState(originalVisibilityTracker(), "isVisibilityScheduled")
 
-    private fun resetPreDrawTrackerScheduled() {
-        WhiteBox.setInternalState(preDrawTracker(), "isVisibilityScheduled", false)
+    private fun resetOriginalVisibilityTrackerScheduled() {
+        WhiteBox.setInternalState(originalVisibilityTracker(), "isVisibilityScheduled", false)
     }
 
-    private fun isPreDrawDetached(): Boolean = WhiteBox.getInternalState(tracker, "preDrawDetached")
+    private fun isOriginalVisibilityDetached(): Boolean = WhiteBox.getInternalState(tracker, "originalVisibilityDetached")
 
     private fun observer() = trackedView.viewTreeObserver
 
@@ -100,18 +100,18 @@ class Life360CreativeVisibilityTrackerTest {
     }
 
     @Test
-    fun preDrawTracker_alone_schedulesCheck_beforeAnyScroll() {
-        resetPreDrawTrackerScheduled()
+    fun originalVisibilityTracker_alone_schedulesCheck_beforeAnyScroll() {
+        resetOriginalVisibilityTrackerScheduled()
 
         observer().dispatchOnPreDraw()
 
-        assertTrue(isPreDrawTrackerScheduled())
-        assertFalse(isPreDrawDetached())
+        assertTrue(isOriginalVisibilityTrackerScheduled())
+        assertFalse(isOriginalVisibilityDetached())
     }
 
     @Test
-    fun preDrawTracker_forwardsNotifications_toThisClasssListener() {
-        val runnable: Runnable = WhiteBox.getInternalState(preDrawTracker(), "visibilityRunnable")
+    fun originalVisibilityTracker_forwardsNotifications_toThisClasssListener() {
+        val runnable: Runnable = WhiteBox.getInternalState(originalVisibilityTracker(), "visibilityRunnable")
 
         runnable.run()
 
@@ -122,27 +122,27 @@ class Life360CreativeVisibilityTrackerTest {
     fun scrollChanged_withoutBoundsChange_doesNotDemote() {
         fireScrollChanged()
 
-        assertFalse(isPreDrawDetached())
+        assertFalse(isOriginalVisibilityDetached())
 
-        // preDrawTracker must still be doing real work afterward.
-        resetPreDrawTrackerScheduled()
+        // originalVisibilityTracker must still be doing real work afterward.
+        resetOriginalVisibilityTrackerScheduled()
         observer().dispatchOnPreDraw()
-        assertTrue(isPreDrawTrackerScheduled())
+        assertTrue(isOriginalVisibilityTrackerScheduled())
     }
 
     @Test
-    fun scrollChanged_withBoundsChange_demotesAndStopsPreDrawTracker() {
+    fun scrollChanged_withBoundsChange_demotesAndStopsOriginalVisibilityTracker() {
         moveTrackedView()
 
         fireScrollChanged()
 
-        assertTrue(isPreDrawDetached())
+        assertTrue(isOriginalVisibilityDetached())
 
-        // preDrawTracker was really stopped, not just bypassed: its own listener is detached, so a
+        // originalVisibilityTracker was really stopped, not just bypassed: its own listener is detached, so a
         // real dispatch no longer schedules anything on it.
-        resetPreDrawTrackerScheduled()
+        resetOriginalVisibilityTrackerScheduled()
         observer().dispatchOnPreDraw()
-        assertFalse(isPreDrawTrackerScheduled())
+        assertFalse(isOriginalVisibilityTrackerScheduled())
     }
 
     @Test
@@ -171,7 +171,7 @@ class Life360CreativeVisibilityTrackerTest {
 
     @Test
     fun beforeDemotion_scrollAndLayoutDoNotDriveThisClasssOwnEngine() {
-        // Neither listener should invoke the debounced engine while preDrawTracker is still live -
+        // Neither listener should invoke the debounced engine while originalVisibilityTracker is still live -
         // it already covers every visual change via pre-draw, scroll-driven or not.
         fireScrollChanged()
         fireGlobalLayout()
@@ -183,17 +183,17 @@ class Life360CreativeVisibilityTrackerTest {
     fun startVisibilityCheck_calledAgainWithSameObserver_preservesDemotionState() {
         moveTrackedView()
         fireScrollChanged() // demote
-        assertTrue(isPreDrawDetached())
+        assertTrue(isOriginalVisibilityDetached())
 
         tracker.startVisibilityCheck(activity)
 
-        assertTrue(isPreDrawDetached())
+        assertTrue(isOriginalVisibilityDetached())
     }
 
     // Attach/detach wiring is verified against a mocked ViewTreeObserver, independent of the
     // real-hierarchy tracker above, since verifying which observer APIs get called is a plain
     // interaction check - it doesn't need (and a mock is more precise than) a real observer. Both
-    // this class's own resolution and preDrawTracker's internal one resolve to the same mock
+    // this class's own resolution and originalVisibilityTracker's internal one resolve to the same mock
     // observer, since both call the same Views.getTopmostView(context, view) with the same args.
     @Test
     fun startVisibilityCheck_attachesAllThreeListeners() {
@@ -211,9 +211,9 @@ class Life360CreativeVisibilityTrackerTest {
         )
         mockedTracker.startVisibilityCheck(activity.applicationContext)
 
-        val preDrawTracker: CreativeVisibilityTracker = WhiteBox.getInternalState(mockedTracker, "preDrawTracker")
+        val originalVisibilityTracker: CreativeVisibilityTracker = WhiteBox.getInternalState(mockedTracker, "originalVisibilityTracker")
         val onPreDrawListener: ViewTreeObserver.OnPreDrawListener =
-            WhiteBox.getInternalState(preDrawTracker, "onPreDrawListener")
+            WhiteBox.getInternalState(originalVisibilityTracker, "onPreDrawListener")
         val onScrollChangedListener: ViewTreeObserver.OnScrollChangedListener =
             WhiteBox.getInternalState(mockedTracker, "onScrollChangedListener")
         val onGlobalLayoutListener: ViewTreeObserver.OnGlobalLayoutListener =
@@ -238,7 +238,7 @@ class Life360CreativeVisibilityTrackerTest {
         moveTrackedView()
         fireScrollChanged() // demotes; the debounce window may or may not let this one through
         clearDebounceWindow()
-        fireScrollChanged() // guaranteed to run now that preDrawDetached is already true
+        fireScrollChanged() // guaranteed to run now that originalVisibilityDetached is already true
 
         val timerMap: Map<*, PausableCountDownTimer> = WhiteBox.getInternalState(tracker, "viewabilityTimerMap")
         val timer = timerMap.values.singleOrNull()
