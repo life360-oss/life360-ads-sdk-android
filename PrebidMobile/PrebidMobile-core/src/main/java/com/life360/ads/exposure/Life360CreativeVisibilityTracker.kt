@@ -14,17 +14,14 @@ import org.prebid.mobile.rendering.utils.helpers.VisibilityChecker
 import org.prebid.mobile.rendering.views.webview.mraid.Views
 import com.life360.ads.utils.Life360Utils
 import com.life360.ads.utils.PausableCountDownTimer
+import org.prebid.mobile.rendering.models.VisibilityTracker
 import java.lang.ref.WeakReference
 import java.util.Collections
 
 class Life360CreativeVisibilityTracker(
     trackedView: View,
     visibilityTrackerOptionSet: Set<VisibilityTrackerOption>
-) {
-
-    interface VisibilityTrackerListener {
-        fun onVisibilityChanged(result: VisibilityTrackerResult)
-    }
+) : VisibilityTracker {
 
     private val onScrollChangedListener: ViewTreeObserver.OnScrollChangedListener
     private val onGlobalLayoutListener: ViewTreeObserver.OnGlobalLayoutListener
@@ -32,7 +29,7 @@ class Life360CreativeVisibilityTracker(
 
     private val trackedView: WeakReference<View> = WeakReference(trackedView)
     private val visibilityCheckerList: MutableList<VisibilityChecker> = ArrayList()
-    private var visibilityTrackerListener: VisibilityTrackerListener? = null
+    private var visibilityTrackerListener: VisibilityTracker.VisibilityTrackerListener? = null
     private var proceedAfterImpTracking: Boolean = false
 
     private val viewabilityTimerMap: MutableMap<VisibilityChecker, PausableCountDownTimer> = mutableMapOf()
@@ -80,11 +77,11 @@ class Life360CreativeVisibilityTracker(
         weakViewTreeObserver = WeakReference(null)
     }
 
-    fun setVisibilityTrackerListener(visibilityTrackerListener: VisibilityTrackerListener?) {
+    override fun setVisibilityTrackerListener(visibilityTrackerListener: VisibilityTracker.VisibilityTrackerListener?) {
         this.visibilityTrackerListener = visibilityTrackerListener
     }
 
-    fun startVisibilityCheck(context: Context) {
+    override fun startVisibilityCheck(context: Context) {
         val tracked = trackedView.get()
         if (tracked == null) {
             LogUtil.error(TAG, "Couldn't start visibility check. Tasrget view is null")
@@ -98,11 +95,11 @@ class Life360CreativeVisibilityTracker(
     /**
      * Used for interstitial cases, when the ad is opened in the new view hierarchy or received the new window focus.
      */
-    fun restartVisibilityCheck() {
+    override fun restartVisibilityCheck() {
         viewabilityCheckDebouncer.invoke()
     }
 
-    fun stopVisibilityCheck() {
+    override fun stopVisibilityCheck() {
         val viewTreeObserver = weakViewTreeObserver.get()
         if (viewTreeObserver != null && viewTreeObserver.isAlive) {
             try {
