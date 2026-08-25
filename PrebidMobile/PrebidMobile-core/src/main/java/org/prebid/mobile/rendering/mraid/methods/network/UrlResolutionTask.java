@@ -20,6 +20,7 @@ import android.os.AsyncTask;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import com.life360.ads.utils.Life360Utils;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.PrebidMobile;
 
@@ -50,6 +51,7 @@ public class UrlResolutionTask extends AsyncTask<String, Void, String> {
         String previousUrl = null;
         try {
             String locationUrl = urls[0];
+            LogUtil.debug(TAG, "Resolving click-through: " + locationUrl);
 
             int redirectCount = 0;
             while (locationUrl != null && redirectCount < GetOriginalUrlTask.MAX_REDIRECTS) {
@@ -62,15 +64,21 @@ public class UrlResolutionTask extends AsyncTask<String, Void, String> {
                 previousUrl = locationUrl;
                 locationUrl = getRedirectLocation(locationUrl);
                 redirectCount++;
+                if (locationUrl != null) {
+                    LogUtil.debug(TAG, "Redirect hop: " + locationUrl);
+                }
             }
         }
         catch (IOException e) {
+            LogUtil.debug(TAG, "Resolution abandoned on IOException: " + e.getMessage());
             return null;
         }
         catch (URISyntaxException e) {
+            LogUtil.debug(TAG, "Resolution abandoned on URISyntaxException: " + e.getMessage());
             return null;
         }
         catch (NullPointerException e) {
+            LogUtil.debug(TAG, "Resolution abandoned on NullPointerException: " + e.getMessage());
             return null;
         }
 
@@ -122,12 +130,20 @@ public class UrlResolutionTask extends AsyncTask<String, Void, String> {
                 result = baseUri.resolve(redirectUrl).toString();
             }
             catch (IllegalArgumentException e) {
-                // Ensure the request is cancelled instead of resolving an intermediary URL
-                LogUtil.error(TAG, "Invalid URL redirection. baseUrl=" + baseUrl + "\n redirectUrl=" + redirectUrl);
-                throw new URISyntaxException(redirectUrl, "Unable to parse invalid URL");
+                try {
+                    // A redirectUrl contains characters that prevent a proper resolve() call. The
+                    // redirectURl must be repaired before attempting to resolve again.
+                    String updatedUrl = Life360Utils.repairRedirectUrl(redirectUrl);
+                    result = baseUri.resolve(updatedUrl).toString();
+                }
+                catch (IllegalArgumentException stillUnparseable) {
+                    // Ensure the request is cancelled instead of resolving an intermediary URL
+                    LogUtil.error(TAG, "Invalid URL redirection. baseUrl=" + baseUrl + "\n redirectUrl=" + redirectUrl + "\n reason=" + stillUnparseable.getMessage());
+                    throw new URISyntaxException(redirectUrl, "Unable to parse invalid URL");
+                }
             }
             catch (NullPointerException e) {
-                LogUtil.error(TAG, "Invalid URL redirection. baseUrl=" + baseUrl + "\n redirectUrl=" + redirectUrl);
+                LogUtil.error(TAG, "Invalid URL redirection. baseUrl=" + baseUrl + "\n redirectUrl=" + redirectUrl + "\n reason=missing location header");
                 throw e;
             }
         }

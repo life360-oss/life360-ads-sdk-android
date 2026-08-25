@@ -8,6 +8,26 @@ import android.widget.ImageView
 import java.util.concurrent.atomic.AtomicLong
 
 object Life360Utils {
+
+    /**
+     * Makes a redirect target that a parser rejected resolvable on a second attempt, by encoding the
+     * characters a URI may not carry and leaving everything else alone.
+     *
+     * A url arrives this way when whatever produced it did not encode its own values, most often an
+     * ad server leaving a macro it failed to expand in place:
+     *
+     * Example:
+     * ```
+     * ;gdpr_consent=${GDPR_CONSENT_755};   ->   ;gdpr_consent=$%7BGDPR_CONSENT_755%7D;
+     * ```
+     */
+    @JvmStatic
+    fun repairRedirectUrl(url: String?): String? {
+        return url
+            ?.replace("{", "%7B")
+            ?.replace("}", "%7D")
+    }
+
     fun debounceAction(intervalMs: Long, action: () -> Unit): () -> Unit {
         val lastCall = AtomicLong(0L)
         return {
