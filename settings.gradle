@@ -63,6 +63,9 @@ include ':PrebidDemoKotlin'
 include ':PrebidInternalTestApp'
 include ':PrebidNextGenDemo'
 
+// Life360 Ads Demo apps
+include ':Life360AdsDemo'
+
 // Other
 //include ':DrPrebid'
 
@@ -77,6 +80,8 @@ project(':test-utils').projectDir = new File('PrebidMobile/test-utils')
 project(':PrebidDemoJava').projectDir = new File('Example/PrebidDemoJava')
 project(':PrebidDemoKotlin').projectDir = new File('Example/PrebidDemoKotlin')
 project(':PrebidInternalTestApp').projectDir = new File('Example/PrebidInternalTestApp')
-//project(':PrebidNextGenDemo').projectDir = new File('Example/PrebidNextGenDemo')
+project(':PrebidNextGenDemo').projectDir = new File('Example/PrebidNextGenDemo')
+
+project(':Life360AdsDemo').projectDir = new File('Example/Life360AdsDemo/app')
 
 //project(':DrPrebid').projectDir = new File('tools/drprebid')

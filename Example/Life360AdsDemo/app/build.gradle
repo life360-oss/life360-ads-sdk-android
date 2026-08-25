@@ -1,0 +1,64 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+android {
+    namespace "com.life360"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.nativo.mraidandroidapp"
+        minSdkVersion 24
+        targetSdkVersion 36
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17.toString()
+        // A few non-Compose AndroidX -ktx artifacts (core-ktx, lifecycle-runtime-ktx) ship newer
+        // releases built with Kotlin 2.x's metadata format even though their API surface here is
+        // plain classes/extension functions with no 2.x-only language constructs, so this module's
+        // 1.8.0 compiler can safely consume them.
+        freeCompilerArgs += ["-Xskip-metadata-version-check"]
+    }
+    buildFeatures {
+        compose true
+    }
+    composeOptions {
+        // The Compose compiler matching kotlin.version=1.8.0. Google stopped publishing this
+        // artifact after Compose Compiler 1.5.4/Kotlin 1.9.20, when the compiler moved into the
+        // Kotlin repo itself (org.jetbrains.kotlin.plugin.compose, Kotlin 2.0+ only) — so this
+        // module is capped at this Compose/Kotlin generation.
+        kotlinCompilerExtensionVersion = "1.4.0"
+    }
+}
+
+dependencies {
+    implementation libs.life360.ads.sdk
+    // Loads native ads' remote icon/main images — a plain Java library, so it carries none of the
+    // Kotlin-metadata compatibility risk the comment above flags for Compose artifacts.
+    implementation libs.glide
+
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.material.icons.extended
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.ui.graphics
+    implementation libs.androidx.compose.ui.tooling.preview
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.lifecycle.runtime.ktx
+
+    testImplementation libs.junit
+    androidTestImplementation platform(libs.androidx.compose.bom)
+    androidTestImplementation libs.androidx.compose.ui.test.junit4
+    androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation libs.androidx.junit
+    debugImplementation libs.androidx.compose.ui.test.manifest
+    debugImplementation libs.androidx.compose.ui.tooling
+}
