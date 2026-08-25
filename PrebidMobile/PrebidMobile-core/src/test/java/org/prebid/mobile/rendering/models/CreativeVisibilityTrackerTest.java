@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.prebid.mobile.rendering.models.CreativeVisibilityTracker.VisibilityTrackerListener;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
 import org.prebid.mobile.rendering.models.ntv.NativeEventTracker;
@@ -65,7 +64,7 @@ public class CreativeVisibilityTrackerTest {
 
     private VisibilityChecker spyVisibilityChecker;
     @Mock private View mockView;
-    @Mock private VisibilityTrackerListener mockVisibilityTrackerListener;
+    @Mock private VisibilityTracker.VisibilityTrackerListener mockVisibilityTrackerListener;
     @Mock private Window mockWindow;
     @Mock private View mockDecorView;
     @Mock private ViewTreeObserver mockViewTreeObserver;

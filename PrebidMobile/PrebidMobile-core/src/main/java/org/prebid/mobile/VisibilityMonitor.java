@@ -15,6 +15,7 @@ import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 
 import org.jetbrains.annotations.NotNull;
 import org.prebid.mobile.addendum.AdViewUtils;
+import org.prebid.mobile.rendering.models.VisibilityTracker;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.ntv.NativeEventTracker;
 import org.prebid.mobile.rendering.networking.tracking.ServerConnection;
@@ -80,7 +81,7 @@ public class VisibilityMonitor {
 
         private WeakReference<View> containerViewReference;
         @Nullable
-        private Life360CreativeVisibilityTracker visibilityTracker;
+        private VisibilityTracker visibilityTracker;
 
         public VisibilityTimer() {
             super(LONGEVITY, INTERVAL);

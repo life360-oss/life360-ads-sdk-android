@@ -31,6 +31,7 @@ import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.models.AdDetails;
+import org.prebid.mobile.rendering.models.VisibilityTracker;
 import org.prebid.mobile.rendering.models.internal.InternalFriendlyObstruction;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
@@ -53,8 +54,8 @@ public class VideoView extends BaseAdView {
 
     private VideoViewListener listener;
 
-    private Life360CreativeVisibilityTracker visibilityTracker;
-    private final Life360CreativeVisibilityTracker.VisibilityTrackerListener visibilityTrackerListener = this::handleVisibilityChange;
+    private VisibilityTracker visibilityTracker;
+    private final VisibilityTracker.VisibilityTrackerListener visibilityTrackerListener = this::handleVisibilityChange;
 
     private State videoViewState = State.UNDEFINED;
 

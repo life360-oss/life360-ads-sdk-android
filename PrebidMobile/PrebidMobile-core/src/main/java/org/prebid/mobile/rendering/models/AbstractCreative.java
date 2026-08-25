@@ -50,7 +50,7 @@ public abstract class AbstractCreative {
 
     private View creativeView;
 
-    protected Life360CreativeVisibilityTracker creativeVisibilityTracker;
+    protected VisibilityTracker creativeVisibilityTracker;
 
     public AbstractCreative(
             Context context,

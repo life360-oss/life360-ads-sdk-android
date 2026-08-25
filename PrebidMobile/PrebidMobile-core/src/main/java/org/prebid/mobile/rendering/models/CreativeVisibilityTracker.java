@@ -38,18 +38,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-public class CreativeVisibilityTracker {
+public class CreativeVisibilityTracker implements VisibilityTracker {
 
     private static final String TAG = CreativeVisibilityTracker.class.getSimpleName();
 
     // Time interval to use for throttling visibility checks.
     private static final int VISIBILITY_THROTTLE_MILLIS = 200;
-
-    public interface VisibilityTrackerListener {
-
-        void onVisibilityChanged(VisibilityTrackerResult result);
-
-    }
 
     private ViewTreeObserver.OnPreDrawListener onPreDrawListener;
     private WeakReference<ViewTreeObserver> weakViewTreeObserver;

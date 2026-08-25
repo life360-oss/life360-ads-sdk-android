@@ -50,7 +50,9 @@ dependencyResolutionManagement {
 include ':PrebidMobile'
 include ':PrebidMobile-core'
 include ':PrebidMobile-gamEventHandlers'
-include ':PrebidMobile-nextGenEventHandlers'
+// Disabled: ads-mobile-sdk 1.2.1 requires Kotlin 2.0-compatible stdlib/coroutines metadata,
+// incompatible with this project's Kotlin 1.8.0 (required by Life360AdsSDK-appHarbrAdapter).
+//include ':PrebidMobile-nextGenEventHandlers'
 include ':PrebidMobile-admobAdapters'
 include ':PrebidMobile-maxAdapters'
 include ':Life360AdsSDK-appHarbrAdapter'
@@ -61,7 +63,8 @@ include ':omsdk-android'
 include ':PrebidDemoJava'
 include ':PrebidDemoKotlin'
 include ':PrebidInternalTestApp'
-include ':PrebidNextGenDemo'
+// Disabled along with ':PrebidMobile-nextGenEventHandlers' (see above) since this demo depends on it.
+//include ':PrebidNextGenDemo'
 
 // Life360 Ads Demo apps
 include ':Life360AdsDemo'
@@ -71,6 +74,7 @@ include ':Life360AdsDemo'
 
 project(':PrebidMobile-core').projectDir = new File('PrebidMobile/PrebidMobile-core')
 project(':PrebidMobile-gamEventHandlers').projectDir = new File('PrebidMobile/PrebidMobile-gamEventHandlers')
+//project(':PrebidMobile-nextGenEventHandlers').projectDir = new File('PrebidMobile/PrebidMobile-nextGenEventHandlers')
 project(':PrebidMobile-admobAdapters').projectDir = new File('PrebidMobile/PrebidMobile-admobAdapters')
 project(':PrebidMobile-maxAdapters').projectDir = new File('PrebidMobile/PrebidMobile-maxAdapters')
 project(':Life360AdsSDK-appHarbrAdapter').projectDir = new File('PrebidMobile/Life360AdsSDK-appHarbrAdapter')
@@ -80,7 +84,7 @@ project(':test-utils').projectDir = new File('PrebidMobile/test-utils')
 project(':PrebidDemoJava').projectDir = new File('Example/PrebidDemoJava')
 project(':PrebidDemoKotlin').projectDir = new File('Example/PrebidDemoKotlin')
 project(':PrebidInternalTestApp').projectDir = new File('Example/PrebidInternalTestApp')
-project(':PrebidNextGenDemo').projectDir = new File('Example/PrebidNextGenDemo')
+//project(':PrebidNextGenDemo').projectDir = new File('Example/PrebidNextGenDemo')
 
 project(':Life360AdsDemo').projectDir = new File('Example/Life360AdsDemo/app')
 
