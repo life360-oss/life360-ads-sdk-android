@@ -33,7 +33,7 @@ import java.util.Arrays;
  */
 public class GetOriginalUrlTask extends BaseNetworkTask {
 
-    static final int MAX_REDIRECTS = 3;
+    static final int MAX_REDIRECTS = 5;
     private String connectionURL;
 
     public GetOriginalUrlTask(ResponseHandler handler) {
