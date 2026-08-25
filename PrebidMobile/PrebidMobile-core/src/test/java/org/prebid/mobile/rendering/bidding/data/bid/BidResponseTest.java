@@ -145,7 +145,10 @@ public class BidResponseTest {
     }
 
     @Test
-    public void testWinningBidKeywords_originalAdUnit_withoutCacheId_parseError() throws IOException {
+    public void testWinningBidKeywords_originalAdUnit_withoutCacheId_stillWinsWhenCacheFlagOff() throws IOException {
+        // Matches iOS's Bid.isWinning: whether hb_cache_id is required is driven by the live
+        // PrebidMobile.isUseCacheForReportingWithRenderingApi() flag, not by isOriginalAdUnit alone
+        // — so an original ad unit with the flag left at its default (false) still wins without one.
         String responseString = ResourceUtils.convertResourceToString("BidResponseTest/keywords_all_without_cache_id.json");
 
         AdUnitConfiguration adUnitConfiguration = new AdUnitConfiguration();
@@ -153,7 +156,7 @@ public class BidResponseTest {
         BidResponse subject = new BidResponse(responseString, adUnitConfiguration);
 
         assertFalse(subject.hasParseError());
-        assertNull(subject.getWinningBid());
+        assertNotNull(subject.getWinningBid());
     }
 
     @Test
