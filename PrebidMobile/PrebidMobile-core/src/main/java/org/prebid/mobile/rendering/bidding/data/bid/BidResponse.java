@@ -65,7 +65,6 @@ public class BidResponse {
     private Ext ext;
 
     private boolean hasParseError = false;
-    private boolean usesCache;
     private String parseError;
     private String winningBidJson;
     private AdUnitConfiguration adUnitConfiguration;
@@ -81,7 +80,6 @@ public class BidResponse {
         AdUnitConfiguration adUnitConfiguration
     ) {
         seatbids = new ArrayList<>();
-        usesCache = adUnitConfiguration.isOriginalAdUnit() || PrebidMobile.isUseCacheForReportingWithRenderingApi();
         this.adUnitConfiguration = adUnitConfiguration;
 
         parseJson(json);
@@ -268,7 +266,12 @@ public class BidResponse {
         }
         HashMap<String, String> targeting = prebid.getTargeting();
         boolean result = targeting.containsKey("hb_pb") && targeting.containsKey("hb_bidder");
-        if (usesCache) {
+        // Matches iOS's Bid.isWinning: read the flag live rather than permanently requiring
+        // hb_cache_id for every "original API" ad unit regardless of the flag's value. An
+        // AdUnit's init used to force this on for every original ad unit with no way back out,
+        // so a bid PBS didn't get to cache (e.g. no external Prebid Cache reachable) could never
+        // be considered winning even though its content was otherwise perfectly good.
+        if (PrebidMobile.isUseCacheForReportingWithRenderingApi()) {
             result = result && targeting.containsKey("hb_cache_id");
         }
         return result;
