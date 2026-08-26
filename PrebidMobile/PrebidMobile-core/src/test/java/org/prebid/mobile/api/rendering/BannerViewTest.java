@@ -521,6 +521,24 @@ public class BannerViewTest {
         assertNull(bannerView.getGpid());
     }
 
+    @Test
+    public void setPrebidServerEnabled_EqualsIsPrebidServerEnabled() {
+        bannerView.setPrebidServerEnabled(false);
+        assertFalse(bannerView.isPrebidServerEnabled());
+
+        bannerView.setPrebidServerEnabled(true);
+        assertTrue(bannerView.isPrebidServerEnabled());
+    }
+
+    @Test
+    public void prebidServerEnabled_defaultsToSdkWideValue() {
+        Life360Ads.setPrebidServerEnabled(false);
+        assertFalse(new BannerView(mockContext, AD_UNIT_ID, AD_SIZE).isPrebidServerEnabled());
+
+        Life360Ads.setPrebidServerEnabled(true);
+        assertTrue(new BannerView(mockContext, AD_UNIT_ID, AD_SIZE).isPrebidServerEnabled());
+    }
+
     private BidRequesterListener getBidRequesterListener() {
         try {
             return (BidRequesterListener) WhiteBox.field(BannerView.class, "bidRequesterListener").get(bannerView);

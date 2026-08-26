@@ -486,6 +486,19 @@ public class BannerView extends FrameLayout {
     }
 
     /**
+     * Overrides the SDK-wide default ({@code Life360Ads.isPrebidServerEnabled}) for this
+     * banner only. If switching to enable Prebid Server, please make sure you've called
+     * {@code PrebidMobile.initializeSdk()} first.
+     */
+    public void setPrebidServerEnabled(boolean prebidServerEnabled) {
+        adUnitConfig.setPrebidServerEnabled(prebidServerEnabled);
+    }
+
+    public boolean isPrebidServerEnabled() {
+        return adUnitConfig.isPrebidServerEnabled();
+    }
+
+    /**
      * Which ad server actually served the last impression, or null before the first auction resolves.
      */
     @Nullable
