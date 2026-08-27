@@ -6,6 +6,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.life360.ads.AdSize
 import com.life360.ads.NativeAdUnit
 import com.life360.ads.NativeAsset
 import com.life360.ads.NativeDataAsset

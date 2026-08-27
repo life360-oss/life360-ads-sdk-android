@@ -8,6 +8,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.life360.ads.AdSize
 import com.life360.ads.api.exceptions.AdException
 import com.life360.ads.api.rendering.BannerView
 import com.life360.ads.api.rendering.listeners.Life360BannerViewListener
@@ -21,8 +22,9 @@ sealed interface AdSlotState {
     data class Failed(val message: String?) : AdSlotState
 }
 
-/** Owns one tab's ad request for the lifetime of the Activity — see [BannerAdSlotController] and
- * [NativeAdSlotController], the two shapes a request takes in this harness. */
+/** Owns one tab's ad request for the lifetime of the Activity — see [BannerAdSlotController],
+ * [Life360VideoAdSlotController], and [NativeAdSlotController], the shapes a request takes in this
+ * harness. */
 interface AdSlotController {
     val config: AdConfiguration
     val events: AdEventLog
@@ -38,7 +40,7 @@ interface AdSlotController {
 }
 
 /**
- * Owns one format's [BannerView] for the lifetime of the Activity.
+ * Owns the Banner tab's [BannerView] for the lifetime of the Activity.
  *
  * The view is created and destroyed here rather than inside composition because switching tabs tears
  * the Compose subtree down. A view created by an `AndroidView` factory would be rebuilt on every
@@ -47,15 +49,15 @@ interface AdSlotController {
  */
 @Stable
 class BannerAdSlotController(
-    override val config: AdConfiguration,
     private val activity: Activity,
 ) : AdSlotController {
-    // Only Banner and L360 Video are ever wrapped in this controller — see AdConfiguration's kdoc —
-    // so a missing configId/adSize here means a NATIVE-shaped config was passed in by mistake.
-    private val configId = requireNotNull(config.configId) { "${config.title} has no configId" }
-    private val adSize = requireNotNull(config.adSize) { "${config.title} has no adSize" }
-
+    override val config = AdConfiguration.BANNER
     override val events = AdEventLog()
+
+    // Stored impression and size copied from the iOS counterpart's BannerAdSlotView, so this tab
+// requests — and renders — the same ad. The `ntv_tm` override matches its targeting too.
+    val configId = "nativo-imp-id"
+    val requestAdSize = AdSize(320, 50)
 
     override var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
         private set
@@ -71,7 +73,7 @@ class BannerAdSlotController(
 
         applyCustomQueryParams()
 
-        val banner = BannerView(activity, configId, adSize).apply {
+        val banner = BannerView(activity, configId, requestAdSize).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -97,16 +99,14 @@ class BannerAdSlotController(
     }
 
     private fun applyCustomQueryParams() {
-        if (config.customQueryParams.isEmpty()) return
         val prefs = activity.getSharedPreferences(
             Life360QueryParameterStore.prefsName(configId),
             Context.MODE_PRIVATE,
         )
         prefs.edit()
             .clear()
-            .apply {
-            config.customQueryParams.forEach { (key, value) -> putString(key, value) }
-        }.apply()
+            .putString("ntv_tm", "tout")
+            .apply()
     }
 
     private val bannerListener = object : Life360BannerViewListener {
