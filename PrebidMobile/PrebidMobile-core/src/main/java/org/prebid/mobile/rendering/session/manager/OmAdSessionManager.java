@@ -107,8 +107,18 @@ public class OmAdSessionManager {
         return new OmAdSessionManager(jsLibraryManager);
     }
 
+    /**
+     * Returns the html unchanged when the OMID script is unavailable: injecting an empty script
+     * yields a creative that looks measured but reports nothing, which is harder to notice than an ad
+     * that simply renders without measurement.
+     */
     public String injectValidationScriptIntoHtml(String html) {
-        return ScriptInjector.injectScriptContentIntoHtml(jsLibraryManager.getOMSDKScript(), html);
+        String omidScript = jsLibraryManager.getOMSDKScript();
+        if (omidScript == null || omidScript.isEmpty()) {
+            LogUtil.error(TAG, "Skipping OMID script injection: omsdk.js unavailable");
+            return html;
+        }
+        return ScriptInjector.injectScriptContentIntoHtml(omidScript, html);
     }
 
     public void initWebAdSessionManager(WebView adView, String contentUrl) {
@@ -512,9 +522,15 @@ public class OmAdSessionManager {
 
     @Nullable
     private AdSessionContext createAdSessionContext(List<VerificationScriptResource> verifications, String contentUrl) {
+        String omidScript = jsLibraryManager.getOMSDKScript();
+        if (omidScript == null || omidScript.isEmpty()) {
+            LogUtil.error(TAG, "Failure createAdSessionContext: omsdk.js unavailable");
+            return null;
+        }
+
         try {
             return AdSessionContext.createNativeAdSessionContext(partner,
-                    jsLibraryManager.getOMSDKScript(),
+                    omidScript,
                     verifications,
                     contentUrl,
                     ""

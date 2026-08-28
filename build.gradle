@@ -8,6 +8,6 @@ ext {
 
     artifactGroupId = "com.life360"
     artifactFolder = "${buildDir}/generated-artifacts"
-    omSdkVersion = "1.6.5"
+    omSdkVersion = "1.6.9"
     omSdkModuleName = "omsdk-android"
 }
