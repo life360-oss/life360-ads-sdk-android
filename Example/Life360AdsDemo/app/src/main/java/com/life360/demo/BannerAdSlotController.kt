@@ -8,11 +8,11 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.life360.ads.AdSize
-import com.life360.ads.api.exceptions.AdException
-import com.life360.ads.api.rendering.BannerView
-import com.life360.ads.api.rendering.listeners.Life360BannerViewListener
 import com.life360.ads.networking.Life360QueryParameterStore
+import org.prebid.mobile.AdSize
+import org.prebid.mobile.api.exceptions.AdException
+import org.prebid.mobile.api.rendering.BannerView
+import org.prebid.mobile.api.rendering.listeners.Life360BannerViewListener
 
 /** What the slot has to show, published to Compose. */
 sealed interface AdSlotState {

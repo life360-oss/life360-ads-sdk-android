@@ -6,17 +6,17 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.life360.ads.AdSize
-import com.life360.ads.NativeAdUnit
-import com.life360.ads.NativeAsset
-import com.life360.ads.NativeDataAsset
-import com.life360.ads.NativeEventTracker
-import com.life360.ads.NativeImageAsset
-import com.life360.ads.NativeTitleAsset
-import com.life360.ads.PrebidMobile
-import com.life360.ads.PrebidNativeAd
-import com.life360.ads.PrebidNativeAdEventListener
-import com.life360.ads.ResultCode
+import org.prebid.mobile.AdSize
+import org.prebid.mobile.NativeAdUnit
+import org.prebid.mobile.NativeAsset
+import org.prebid.mobile.NativeDataAsset
+import org.prebid.mobile.NativeEventTracker
+import org.prebid.mobile.NativeImageAsset
+import org.prebid.mobile.NativeTitleAsset
+import org.prebid.mobile.PrebidMobile
+import org.prebid.mobile.PrebidNativeAd
+import org.prebid.mobile.PrebidNativeAdEventListener
+import org.prebid.mobile.ResultCode
 
 // Stored impression on the Prebid Server the app initialized against — the same id the iOS
 // counterpart's NativeAdSlotView uses. Unlike Banner and L360 Video, this slot depends on it to

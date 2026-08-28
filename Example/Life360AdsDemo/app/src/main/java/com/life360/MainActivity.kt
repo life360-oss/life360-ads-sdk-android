@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
 import com.life360.ads.Life360Ads
-import com.life360.ads.PrebidMobile
+import org.prebid.mobile.PrebidMobile
 import com.life360.demo.AdConfiguration
 import com.life360.demo.AdDemoApp
 import com.life360.demo.BannerAdSlotController
