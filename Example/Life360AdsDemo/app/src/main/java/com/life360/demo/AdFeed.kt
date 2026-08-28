@@ -26,7 +26,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.life360.ads.api.rendering.BannerView
+import org.prebid.mobile.api.rendering.BannerView
 import com.life360.ui.theme.Life360AdsDemoTheme
 
 // Muted grey rather than a theme colour, since the page is pinned to white in either theme.
@@ -77,10 +77,12 @@ fun AdFeed(
 private fun AdSlot(controller: AdSlotController) {
     val slotHeight = controller.config.slotHeight
     // The two request shapes this harness exercises each own a different long-lived View — see
-    // BannerAdSlotController.bannerView and NativeAdSlotController.contentView — so the slot just
-    // asks whichever controller it was given for the one it's currently holding.
+    // BannerAdSlotController/Life360VideoAdSlotController's bannerView and
+    // NativeAdSlotController.contentView — so the slot just asks whichever controller it was given
+    // for the one it's currently holding.
     val hostedView: View? = when (controller) {
         is BannerAdSlotController -> controller.bannerView
+        is Life360VideoAdSlotController -> controller.bannerView
         is NativeAdSlotController -> controller.contentView
         else -> null
     }
