@@ -52,11 +52,14 @@ class Life360Renderer : PrebidMobilePluginRenderer {
         bidResponse: BidResponse
     ): View {
         var displayViewRef: PrebidDisplayView? = null
+        val adType = bidResponse.winningBid?.let { Life360BidExt.getLife360AdType(it) }
 
         val forwardingListener = object : DisplayViewListener {
             override fun onAdLoaded() = displayViewListener.onAdLoaded()
             override fun onAdClicked() {
-                displayViewRef?.let { displayView ->
+                // Only the article ad is held under its click-through; every other format is left as
+                // it renders.
+                displayViewRef?.takeIf { adType == Life360AdType.ARTICLE }?.let { displayView ->
                     val snapshot = Life360Utils.captureViewSnapshot(displayView)
                     snapshot.tag = TAG
                     snapshot.layoutParams = FrameLayout.LayoutParams(
@@ -97,7 +100,6 @@ class Life360Renderer : PrebidMobilePluginRenderer {
             bidResponse
         )
 
-        val adType = bidResponse.winningBid?.let { Life360BidExt.getLife360AdType(it) }
         if (adType == Life360AdType.STORY || adType == Life360AdType.STP_VIDEO || adType == Life360AdType.CTP_VIDEO) {
             displayViewRef.getInterstitialDisplayProperties().dialogBackgroundColor = Color.BLACK
         }
