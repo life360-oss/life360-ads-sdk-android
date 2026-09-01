@@ -10,7 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.bumptech.glide.Glide
-import com.life360.ads.PrebidNativeAd
+import org.prebid.mobile.PrebidNativeAd
 
 // Muted grey rather than a theme colour, since the card is pinned to a white background regardless
 // of theme — same reasoning as AdFeed's placeholder text colour.

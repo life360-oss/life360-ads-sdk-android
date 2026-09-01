@@ -6,11 +6,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableStateOf
 import com.life360.ads.Life360Ads
-import com.life360.ads.PrebidMobile
+import org.prebid.mobile.PrebidMobile
 import com.life360.demo.AdConfiguration
 import com.life360.demo.AdDemoApp
 import com.life360.demo.BannerAdSlotController
 import com.life360.demo.AdSlotController
+import com.life360.demo.Life360VideoAdSlotController
 import com.life360.demo.NativeAdSlotController
 import com.life360.ui.theme.Life360AdsDemoTheme
 
@@ -36,8 +37,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         controllers = mapOf(
-            AdConfiguration.BANNER to BannerAdSlotController(AdConfiguration.BANNER, this),
-            AdConfiguration.VIDEO to BannerAdSlotController(AdConfiguration.VIDEO, this),
+            AdConfiguration.BANNER to BannerAdSlotController(this),
+            AdConfiguration.VIDEO to Life360VideoAdSlotController(this),
             AdConfiguration.NATIVE to NativeAdSlotController(this),
         )
 

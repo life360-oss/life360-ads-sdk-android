@@ -23,9 +23,12 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 /**
- * Downloader and fetcher for JS scripts needed for the Prebid SDK (omsdk.js, mraid.js).
+ * Downloader and fetcher for the JS scripts the SDK fetches at runtime (mraid.js).
  * If you need to work with JS scripts from the SDK use {@link JSLibraryManager},
  * because this class contains internal implementation.
+ * <p>
+ * omsdk.js is deliberately not here: it ships as a packaged asset so that the version measurement
+ * vendors see always matches the omsdk-android AAR compiled against. See {@link JSLibraryManager}.
  */
 public class JsScriptsDownloader {
 
@@ -51,13 +54,11 @@ public class JsScriptsDownloader {
 
 
     public boolean areScriptsDownloadedAlready() {
-        return isFileAlreadyDownloaded(JsScriptData.openMeasurementData) &&
-                isFileAlreadyDownloaded(JsScriptData.mraidData);
+        return isFileAlreadyDownloaded(JsScriptData.mraidData);
     }
 
     public void downloadScripts(DownloadListenerCreator listener) {
         try {
-            downloadFile(JsScriptData.openMeasurementData, listener);
             downloadFile(JsScriptData.mraidData, listener);
         } catch (Throwable throwable) {
             LogUtil.error(TAG, "Can't download scripts", throwable);

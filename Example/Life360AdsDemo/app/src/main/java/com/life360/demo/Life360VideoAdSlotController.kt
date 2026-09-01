@@ -14,33 +14,8 @@ import org.prebid.mobile.api.exceptions.AdException
 import org.prebid.mobile.api.rendering.BannerView
 import org.prebid.mobile.api.rendering.listeners.Life360BannerViewListener
 
-/** What the slot has to show, published to Compose. */
-sealed interface AdSlotState {
-    object Idle : AdSlotState
-    object Loading : AdSlotState
-    object Loaded : AdSlotState
-    data class Failed(val message: String?) : AdSlotState
-}
-
-/** Owns one tab's ad request for the lifetime of the Activity — see [BannerAdSlotController],
- * [Life360VideoAdSlotController], and [NativeAdSlotController], the shapes a request takes in this
- * harness. */
-interface AdSlotController {
-    val config: AdConfiguration
-    val events: AdEventLog
-    val state: AdSlotState
-
-    /** Requests an ad unless this slot already has one. Safe to call on every tab visit. */
-    fun load()
-
-    /** Tears the slot down and re-requests, so a scroll-tracking run can be repeated cleanly. */
-    fun reload()
-
-    fun destroy()
-}
-
 /**
- * Owns the Banner tab's [BannerView] for the lifetime of the Activity.
+ * Owns the L360 Video tab's [BannerView] for the lifetime of the Activity.
  *
  * The view is created and destroyed here rather than inside composition because switching tabs tears
  * the Compose subtree down. A view created by an `AndroidView` factory would be rebuilt on every
@@ -48,19 +23,16 @@ interface AdSlotController {
  * making the impression counts this harness exists to check meaningless.
  */
 @Stable
-class BannerAdSlotController(
+class Life360VideoAdSlotController(
     private val activity: Activity,
 ) : AdSlotController {
-    override val config = AdConfiguration.BANNER
+    override val config = AdConfiguration.VIDEO
     override val events = AdEventLog()
-
-    // Stored impression and size copied from the iOS counterpart's BannerAdSlotView, so this tab
-// requests — and renders — the same ad. The `ntv_tm` override matches its targeting too.
-    val configId = "nativo-imp-id"
-    val requestAdSize = AdSize(320, 50)
 
     override var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
         private set
+    val configId: String = "nativo-video-tout-imp-id"
+    val requestAdSize: AdSize = AdSize(300, 250)
 
     var bannerView: BannerView? by mutableStateOf(null)
         private set
@@ -105,6 +77,7 @@ class BannerAdSlotController(
         )
         prefs.edit()
             .clear()
+            .putString("ntv_a", "442149")
             .putString("ntv_tm", "tout")
             .apply()
     }

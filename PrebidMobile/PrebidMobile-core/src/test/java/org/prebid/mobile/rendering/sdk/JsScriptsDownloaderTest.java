@@ -66,13 +66,9 @@ public class JsScriptsDownloaderTest {
         downloader.downloadScripts(mockDownloadListenerCreator);
 
 
-        verify(mockStorage).getInnerFile("PBMJSLibraries/omsdk.js");
+        verify(mockStorage, never()).getInnerFile("PBMJSLibraries/omsdk.js");
         verify(mockStorage).getInnerFile("PBMJSLibraries/mraid.js");
 
-        verify(mockStorage).isFileAlreadyDownloaded(
-                mockFile,
-                "PBMJSLibraries/omsdk.js"
-        );
         verify(mockStorage).isFileAlreadyDownloaded(
                 mockFile,
                 "PBMJSLibraries/mraid.js"
@@ -95,19 +91,14 @@ public class JsScriptsDownloaderTest {
         downloader.downloadScripts(mockDownloadListenerCreator);
 
 
-        verify(mockStorage, atLeastOnce()).getInnerFile("PBMJSLibraries/omsdk.js");
+        verify(mockStorage, never()).getInnerFile("PBMJSLibraries/omsdk.js");
         verify(mockStorage, atLeastOnce()).getInnerFile("PBMJSLibraries/mraid.js");
 
-        verify(mockStorage).isFileAlreadyDownloaded(
-                mockFile,
-                "PBMJSLibraries/omsdk.js"
-        );
         verify(mockStorage).isFileAlreadyDownloaded(
                 mockFile,
                 "PBMJSLibraries/mraid.js"
         );
 
-        verify(mockRequester).download(mockFile, JsScriptData.openMeasurementData, mockDownloadListenerCreator);
         verify(mockRequester).download(mockFile, JsScriptData.mraidData, mockDownloadListenerCreator);
     }
 
