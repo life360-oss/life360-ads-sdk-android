@@ -27,7 +27,6 @@ sealed interface AdSlotState {
  * harness. */
 interface AdSlotController {
     val config: AdConfiguration
-    val events: AdEventLog
     val state: AdSlotState
 
     /** Requests an ad unless this slot already has one. Safe to call on every tab visit. */
@@ -52,7 +51,6 @@ class BannerAdSlotController(
     private val activity: Activity,
 ) : AdSlotController {
     override val config = AdConfiguration.BANNER
-    override val events = AdEventLog()
 
     // Stored impression and size copied from the iOS counterpart's BannerAdSlotView, so this tab
 // requests — and renders — the same ad. The `ntv_tm` override matches its targeting too.
@@ -68,7 +66,6 @@ class BannerAdSlotController(
     override fun load() {
         if (bannerView != null) return
 
-        events.reset()
         state = AdSlotState.Loading
 
         applyCustomQueryParams()
@@ -111,36 +108,28 @@ class BannerAdSlotController(
 
     private val bannerListener = object : Life360BannerViewListener {
         override fun onAdLoaded(bannerView: BannerView) {
-            record("onAdLoaded")
             state = loadedState(bannerView)
         }
 
         // Fires instead of onAdLoaded when Life360 both wins and renders the creative itself.
         override fun onLife360AdLoaded(bannerView: BannerView) {
-            record("onLife360AdLoaded")
             state = loadedState(bannerView)
         }
 
-        override fun onAdDisplayed(bannerView: BannerView) = record("onAdDisplayed")
+        override fun onAdDisplayed(bannerView: BannerView) {}
 
         override fun onAdFailed(bannerView: BannerView, exception: AdException) {
-            record("onAdFailed", exception.message)
             state = AdSlotState.Failed(exception.message)
         }
 
-        override fun onAdClicked(bannerView: BannerView) = record("onAdClicked")
+        override fun onAdClicked(bannerView: BannerView) {}
 
-        override fun onAdClosed(bannerView: BannerView) = record("onAdClosed")
+        override fun onAdClosed(bannerView: BannerView) {}
     }
 
     private fun loadedState(bannerView: BannerView): AdSlotState.Loaded {
         val response = bannerView.bidResponse
         return AdSlotState.Loaded
-    }
-
-    private fun record(name: String, detail: String? = null) {
-        Log.d(TAG, "[${config.title}] $name${detail?.let { " — $it" } ?: ""}")
-        events.record(name, detail)
     }
 
     private companion object {
