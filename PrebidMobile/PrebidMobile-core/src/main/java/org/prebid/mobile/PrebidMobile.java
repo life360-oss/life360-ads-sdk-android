@@ -146,6 +146,7 @@ public class PrebidMobile {
     @NonNull
     private static WeakReference<PrebidEventDelegate> eventDelegateReference = new WeakReference<>(null);
     private static boolean disableStatusCheck = false;
+    private static boolean useCustomTabsForClickThrough = false;
 
     private PrebidMobile() {
     }
@@ -592,6 +593,26 @@ public class PrebidMobile {
      */
     public static boolean shouldDisableStatusCheck() {
         return disableStatusCheck;
+    }
+
+    /**
+     * @param useCustomTabsForClickThrough if true, an http(s) click-through is handed straight to a
+     * Custom Tab instead of being resolved and opened in the SDK's own browser.
+     * <p>
+     * The browser then follows the redirect chain itself, so the click opens without waiting on any
+     * SDK network request. Click-throughs on other schemes are unaffected: a Custom Tab only accepts
+     * http and https, so those still go through {@link org.prebid.mobile.rendering.utils.url.UrlHandler}
+     * and its deep link actions.
+     */
+    public static void setUseCustomTabsForClickThrough(boolean useCustomTabsForClickThrough) {
+        PrebidMobile.useCustomTabsForClickThrough = useCustomTabsForClickThrough;
+    }
+
+    /**
+     * {@link #setUseCustomTabsForClickThrough(boolean)}
+     */
+    public static boolean shouldUseCustomTabsForClickThrough() {
+        return useCustomTabsForClickThrough;
     }
 
     /**
