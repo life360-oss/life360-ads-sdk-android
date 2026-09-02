@@ -23,6 +23,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.VisibleForTesting;
 
+import com.iab.omid.library.life360.adsession.CreativeType;
 import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
 import com.life360.ads.exposure.Life360FriendlyObstructionManager;
 
@@ -169,7 +170,11 @@ public class HTMLCreative extends AbstractCreative implements WebViewDelegate, I
 
         WebViewBase webView = getCreativeView().getWebView();
 
-        omAdSessionManager.initWebAdSessionManager(webView, null);
+        if (getCreativeModel().getOmidCreativeType() == CreativeType.DEFINED_BY_JAVASCRIPT) {
+            omAdSessionManager.initWebVideoAdSessionManager(webView, null);
+        } else {
+            omAdSessionManager.initWebAdSessionManager(webView, null);
+        }
         startOmSession(omAdSessionManager, webView);
     }
 

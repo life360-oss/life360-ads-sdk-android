@@ -132,6 +132,21 @@ public class OmAdSessionManager {
     }
 
     /**
+     * Per the IAB WebView Video integration guide, a JS-rendered video creative signals its own
+     * impression and media events, so both owners are JAVASCRIPT and native must not create
+     * AdEvents/MediaEvents (MediaEvents.createMediaEvents requires a NATIVE owner and throws
+     * otherwise). The creative's own script is responsible for calling the injected omsdk.js.
+     */
+    public void initWebVideoAdSessionManager(WebView adView, String contentUrl) {
+        AdSessionConfiguration adSessionConfiguration = createAdSessionConfiguration(CreativeType.DEFINED_BY_JAVASCRIPT,
+                ImpressionType.DEFINED_BY_JAVASCRIPT,
+                Owner.JAVASCRIPT,
+                Owner.JAVASCRIPT);
+        AdSessionContext adSessionContext = createAdSessionContext(adView, contentUrl);
+        initAdSession(adSessionConfiguration, adSessionContext);
+    }
+
+    /**
      * Initializes Native Video AdSession from AdVerifications.
      *
      * @param adVerifications VAST AdVerification node
@@ -156,7 +171,12 @@ public class OmAdSessionManager {
             LogUtil.error(TAG, "Failed to register displayAdLoaded. AdEvent is null");
             return;
         }
-        adEvents.loaded();
+        try {
+            adEvents.loaded();
+        }
+        catch (IllegalStateException e) {
+            LogUtil.error(TAG, "Failed to register displayAdLoaded: " + Log.getStackTraceString(e));
+        }
     }
 
     /**
