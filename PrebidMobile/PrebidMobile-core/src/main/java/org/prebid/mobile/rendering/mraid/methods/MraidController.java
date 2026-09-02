@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+import com.life360.ads.browser.Life360ClickThroughHandler;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
@@ -179,7 +180,7 @@ public class MraidController {
 
     public void open(WebViewBase oldWebViewBase, String uri, int broadcastId) {
         if (mraidUrlHandler == null) {
-            mraidUrlHandler = new MraidUrlHandler(oldWebViewBase.getContext(), oldWebViewBase.getMRAIDInterface());
+            mraidUrlHandler = new Life360ClickThroughHandler(oldWebViewBase.getContext(), oldWebViewBase.getMRAIDInterface());
         }
         mraidUrlHandler.open(uri, broadcastId);
     }
