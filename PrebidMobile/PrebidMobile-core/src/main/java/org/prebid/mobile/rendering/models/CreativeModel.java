@@ -17,6 +17,7 @@
 package org.prebid.mobile.rendering.models;
 
 import androidx.annotation.Nullable;
+import com.iab.omid.library.life360.adsession.CreativeType;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.rendering.networking.tracking.TrackingManager;
@@ -84,6 +85,8 @@ public class CreativeModel {
     // This is important for the display layer to perform end card functions
     private boolean hasEndCard = false;
 
+    private CreativeType omidCreativeType = CreativeType.HTML_DISPLAY;
+
     public CreativeModel(
             TrackingManager trackingManager,
             OmEventTracker omEventTracker,
@@ -150,6 +153,14 @@ public class CreativeModel {
 
     public void setAdConfiguration(AdUnitConfiguration adConfiguration) {
         this.adConfiguration = adConfiguration;
+    }
+
+    public CreativeType getOmidCreativeType() {
+        return omidCreativeType;
+    }
+
+    public void setOmidCreativeType(CreativeType omidCreativeType) {
+        this.omidCreativeType = omidCreativeType;
     }
 
     public String getName() {

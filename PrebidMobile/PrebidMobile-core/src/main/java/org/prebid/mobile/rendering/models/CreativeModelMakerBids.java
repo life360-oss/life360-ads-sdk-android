@@ -21,6 +21,10 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.iab.omid.library.life360.adsession.CreativeType;
+import com.life360.ads.bid.Life360AdType;
+import com.life360.ads.bid.Life360BidExt;
+
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.data.AdFormat;
 import org.prebid.mobile.api.exceptions.AdException;
@@ -121,6 +125,7 @@ public class CreativeModelMakerBids {
         CreativeModel model = new CreativeModel(TrackingManager.getInstance(), new OmEventTracker(), adConfiguration);
         model.setName("HTML");
         model.setHtml(adHtml);
+        model.setOmidCreativeType(resolveCreativeType(bid));
         model.setWidth(bid != null ? bid.getWidth() : 0);
         model.setHeight(bid != null ? bid.getHeight() : 0);
         model.setRequireImpressionUrl(false);
@@ -131,6 +136,17 @@ public class CreativeModelMakerBids {
         result.transactionState = "bid";
 
         listener.onCreativeModelReady(result);
+    }
+
+    // This is the banner (non-video) response branch of makeModels; the OM creative type is
+    // HTML_DISPLAY unless the bid is a web video format, which self-reports OM events via
+    // its own injected JS and so needs DEFINED_BY_JAVASCRIPT (see the IAB WebView Video guide).
+    private CreativeType resolveCreativeType(Bid bid) {
+        Life360AdType life360AdType = Life360BidExt.getLife360AdType(bid);
+        if (life360AdType == Life360AdType.CTP_VIDEO || life360AdType == Life360AdType.STP_VIDEO) {
+            return CreativeType.DEFINED_BY_JAVASCRIPT;
+        }
+        return CreativeType.HTML_DISPLAY;
     }
 
     private String getAdHtml(AdUnitConfiguration adConfiguration, Bid bid) {
