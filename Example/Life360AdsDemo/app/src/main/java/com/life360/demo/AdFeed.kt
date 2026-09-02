@@ -32,15 +32,7 @@ import com.life360.ui.theme.Life360AdsDemoTheme
 // Muted grey rather than a theme colour, since the page is pinned to white in either theme.
 private val PLACEHOLDER_TEXT_COLOR = Color(0xFF666666)
 
-/**
- * A blank white page carrying one ad slot, centred at rest with empty runway above and below it.
- *
- * Deliberately a `verticalScroll` column rather than a `LazyColumn`: a lazy list disposes items once
- * they leave the viewport, which would detach the [BannerView] and end its Open Measurement session.
- * That turns every scroll into a teardown-and-rebuild and measures view recycling instead of
- * viewability. Keeping the slot composed means the ad view stays attached and only its on-screen
- * exposure changes — which is what the OM SDK and the SDK's visibility trackers actually observe.
- */
+
 @Composable
 fun AdFeed(
     controller: AdSlotController,
@@ -189,7 +181,7 @@ private fun SlotPlaceholderPreview() {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(AdConfiguration.BANNER.slotHeight)
+                .height(TabConfiguration.BANNER.slotHeight)
                 .background(Color.White),
             contentAlignment = Alignment.Center,
         ) {

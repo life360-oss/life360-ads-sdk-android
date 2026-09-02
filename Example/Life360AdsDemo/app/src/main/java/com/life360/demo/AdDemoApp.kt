@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
-private val DEMO_AD_FORMATS = AdConfiguration.values().toList()
+private val TABS = TabConfiguration.values().toList()
 
 // Hardcoded rather than theme-driven: the demo is pinned to a fixed light look regardless of the
 // device's dynamic color scheme, to match the iOS counterpart's flat white bars and system-blue tint.
@@ -50,13 +50,13 @@ private val TAB_UNSELECTED_TINT = Color(0xFF1C1C1E)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdDemoApp(
-    controllers: Map<AdConfiguration, AdSlotController>,
+    controllers: Map<TabConfiguration, AdSlotController>,
     sdkReady: Boolean,
 ) {
-    var selected by remember { mutableStateOf(AdConfiguration.BANNER) }
+    var selected by remember { mutableStateOf(TabConfiguration.BANNER) }
 
     // Hoisted above the tab switch so a slot left scrolled off screen is still there on return.
-    val scrollStates = remember { DEMO_AD_FORMATS.associateWith { ScrollState(initial = 0) } }
+    val scrollStates = remember { TABS.associateWith { ScrollState(initial = 0) } }
     val controller = controllers.getValue(selected)
 
     // Requested on first visit rather than all three up front, so each slot's bid request and OM
@@ -104,7 +104,7 @@ private fun DemoTopBar(controller: AdSlotController, sdkReady: Boolean) {
  * Material3 approximation of the iOS tab bar's default "Liquid Glass" floating capsule style.
  */
 @Composable
-private fun FormatTabBar(selected: AdConfiguration, onSelect: (AdConfiguration) -> Unit) {
+private fun FormatTabBar(selected: TabConfiguration, onSelect: (TabConfiguration) -> Unit) {
     Surface(
         color = TAB_BAR_TRACK,
         shape = RoundedCornerShape(28.dp),
@@ -117,7 +117,7 @@ private fun FormatTabBar(selected: AdConfiguration, onSelect: (AdConfiguration) 
             modifier = Modifier.padding(6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            DEMO_AD_FORMATS.forEach { format ->
+            TABS.forEach { format ->
                 TabItem(
                     format = format,
                     isSelected = format == selected,
@@ -130,7 +130,7 @@ private fun FormatTabBar(selected: AdConfiguration, onSelect: (AdConfiguration) 
 
 @Composable
 private fun RowScope.TabItem(
-    format: AdConfiguration,
+    format: TabConfiguration,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {

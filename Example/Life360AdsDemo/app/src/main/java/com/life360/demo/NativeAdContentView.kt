@@ -12,19 +12,11 @@ import android.widget.TextView
 import com.bumptech.glide.Glide
 import org.prebid.mobile.PrebidNativeAd
 
-// Muted grey rather than a theme colour, since the card is pinned to a white background regardless
-// of theme — same reasoning as AdFeed's placeholder text colour.
 private const val PLACEHOLDER_FILL = "#EEEEEE"
 private const val SECONDARY_TEXT = "#666666"
 private const val CTA_TINT = "#3478F6"
 
-/**
- * The publisher-owned layout for a native ad — the Android counterpart of iOS's `NativeAdContentView`.
- *
- * Native demand returns assets, not a creative, so the app supplies the layout. A plain Android
- * `View` hierarchy rather than a Composable: `PrebidNativeAd.registerView` attaches its click
- * handlers and viewability timer to concrete platform views, which Compose nodes aren't.
- */
+
 class NativeAdContentView(context: Context) : LinearLayout(context) {
 
     private val iconImage = ImageView(context)

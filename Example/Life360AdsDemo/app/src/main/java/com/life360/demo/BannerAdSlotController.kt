@@ -2,7 +2,6 @@ package com.life360.demo
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import android.view.ViewGroup
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -26,7 +25,7 @@ sealed interface AdSlotState {
  * [Life360VideoAdSlotController], and [NativeAdSlotController], the shapes a request takes in this
  * harness. */
 interface AdSlotController {
-    val config: AdConfiguration
+    val config: TabConfiguration
     val state: AdSlotState
 
     /** Requests an ad unless this slot already has one. Safe to call on every tab visit. */
@@ -50,7 +49,7 @@ interface AdSlotController {
 class BannerAdSlotController(
     private val activity: Activity,
 ) : AdSlotController {
-    override val config = AdConfiguration.BANNER
+    override val config = TabConfiguration.BANNER
 
     // Stored impression and size copied from the iOS counterpart's BannerAdSlotView, so this tab
 // requests — and renders — the same ad. The `ntv_tm` override matches its targeting too.

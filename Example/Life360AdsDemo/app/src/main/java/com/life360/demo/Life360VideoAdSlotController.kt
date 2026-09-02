@@ -2,7 +2,6 @@ package com.life360.demo
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import android.view.ViewGroup
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -14,19 +13,12 @@ import org.prebid.mobile.api.exceptions.AdException
 import org.prebid.mobile.api.rendering.BannerView
 import org.prebid.mobile.api.rendering.listeners.Life360BannerViewListener
 
-/**
- * Owns the L360 Video tab's [BannerView] for the lifetime of the Activity.
- *
- * The view is created and destroyed here rather than inside composition because switching tabs tears
- * the Compose subtree down. A view created by an `AndroidView` factory would be rebuilt on every
- * visit, which would issue a fresh bid request and start a new Open Measurement session each time —
- * making the impression counts this harness exists to check meaningless.
- */
+
 @Stable
 class Life360VideoAdSlotController(
     private val activity: Activity,
 ) : AdSlotController {
-    override val config = AdConfiguration.VIDEO
+    override val config = TabConfiguration.VIDEO
 
     override var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
         private set

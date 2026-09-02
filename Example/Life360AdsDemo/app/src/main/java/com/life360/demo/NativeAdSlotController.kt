@@ -1,12 +1,10 @@
 package com.life360.demo
 
 import android.app.Activity
-import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.prebid.mobile.AdSize
 import org.prebid.mobile.NativeAdUnit
 import org.prebid.mobile.NativeAsset
 import org.prebid.mobile.NativeDataAsset
@@ -18,17 +16,10 @@ import org.prebid.mobile.PrebidNativeAd
 import org.prebid.mobile.PrebidNativeAdEventListener
 import org.prebid.mobile.ResultCode
 
-/**
- * A native ad slot — the one format in this harness that doesn't render through `BannerView`.
- *
- * Native uses Prebid's original API: `NativeAdUnit.fetchDemand` returns a cached bid rather than a
- * rendered creative, and the app builds the layout ([NativeAdContentView]) and registers it for
- * viewability itself. That mirrors the iOS counterpart's `NativeAdSlotView`, and it's what makes this
- * slot's demand — and so its ad — comparable to iOS's rather than to Banner/Video's BannerView path.
- */
+
 @Stable
 class NativeAdSlotController(private val activity: Activity) : AdSlotController {
-    override val config = AdConfiguration.NATIVE
+    override val config = TabConfiguration.NATIVE
 
     private val configId = "test-imp-id-native"
 
