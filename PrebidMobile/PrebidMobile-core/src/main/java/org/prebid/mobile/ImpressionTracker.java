@@ -19,87 +19,80 @@ package org.prebid.mobile;
 import android.annotation.SuppressLint;
 import android.content.Context;
 
+import androidx.annotation.Nullable;
+
 import org.prebid.mobile.http.HTTPGet;
 import org.prebid.mobile.http.HTTPResponse;
 
 /**
- * Impression tracker for native ad.
+ * Fires one of a native ad's impression trackers, queueing the URL for a later attempt when the device is
+ * offline rather than dropping it.
+ * <p>
+ * Deciding <em>when</em> to fire is not this class's job — that is the viewability tracker's, which knows
+ * each tracker's declared event type and its threshold. This mirrors {@link ClickTracker}, whose shape it
+ * shares for the same reason.
  */
 class ImpressionTracker {
-    private String url;
-    private VisibilityDetector visibilityDetector;
-    private boolean fired = false;
-    private Context context;
-    private ImpressionListener listener;
-    private ImpressionTrackerListener impressionTrackerListener;
 
-    static ImpressionTracker create(String url, VisibilityDetector visibilityDetector, Context context, ImpressionTrackerListener impressionTrackerListener) {
-        if (visibilityDetector == null) {
-            return null;
-        } else {
-            ImpressionTracker impressionTracker = new ImpressionTracker(url, visibilityDetector, context, impressionTrackerListener);
-            visibilityDetector.addVisibilityListener(impressionTracker.listener);
-            return impressionTracker;
-        }
+    private final String url;
+    private final Context context;
+    @Nullable
+    private final ImpressionTrackerListener impressionTrackerListener;
+    private boolean fired = false;
+
+    static ImpressionTracker createAndFire(
+            String url,
+            Context context,
+            @Nullable ImpressionTrackerListener impressionTrackerListener
+    ) {
+        ImpressionTracker impressionTracker = new ImpressionTracker(url, context, impressionTrackerListener);
+        impressionTracker.fire();
+        return impressionTracker;
     }
 
-    private ImpressionTracker(String url, VisibilityDetector visibilityDetector, Context context, ImpressionTrackerListener impressionTrackerListener) {
+    private ImpressionTracker(
+            String url,
+            Context context,
+            @Nullable ImpressionTrackerListener impressionTrackerListener
+    ) {
         this.url = url;
-        this.visibilityDetector = visibilityDetector;
-        this.listener = new ImpressionListener();
         this.context = context.getApplicationContext();
         this.impressionTrackerListener = impressionTrackerListener;
     }
 
     private synchronized void fire() {
-        // check if impression has already fired
-        if (!fired) {
-            SharedNetworkManager nm = SharedNetworkManager.getInstance(context);
-            if (nm.isConnected(context)) {
-                @SuppressLint("StaticFieldLeak") HTTPGet asyncTask = new HTTPGet() {
-                    @Override
-                    protected void onPostExecute(HTTPResponse response) {
-                        if (impressionTrackerListener != null) {
-                            impressionTrackerListener.onImpressionTrackerFired();
-                        }
-                    }
+        if (fired) {
+            return;
+        }
+        fired = true;
 
-                    @Override
-                    protected String getUrl() {
-                        return url;
-                    }
-                };
-                asyncTask.execute();
-                visibilityDetector.removeVisibilityListener(listener);
-                listener = null;
-            } else {
-                nm.addURL(url, context, new ImpressionTrackerListener() {
-                    @Override
-                    public void onImpressionTrackerFired() {
-                        if (impressionTrackerListener != null) {
-                            impressionTrackerListener.onImpressionTrackerFired();
-                        }
-                    }
-                });
-            }
-            fired = true;
+        SharedNetworkManager nm = SharedNetworkManager.getInstance(context);
+        if (nm.isConnected(context)) {
+            @SuppressLint("StaticFieldLeak") HTTPGet asyncTask = new HTTPGet() {
+                @Override
+                protected void onPostExecute(HTTPResponse response) {
+                    notifyFired();
+                }
+
+                @Override
+                protected String getUrl() {
+                    return url;
+                }
+            };
+            asyncTask.execute();
+        } else {
+            nm.addURL(url, context, this::notifyFired);
         }
     }
 
-    class ImpressionListener implements VisibilityDetector.VisibilityListener {
-        long elapsedTime = 0;
-
-        @Override
-        public void onVisibilityChanged(boolean visible) {
-            if (visible) {
-                elapsedTime += VisibilityDetector.VISIBILITY_THROTTLE_MILLIS;
-            } else {
-                elapsedTime = 0;
-            }
-            if (elapsedTime >= Util.NATIVE_AD_VISIBLE_PERIOD_MILLIS) {
-                ImpressionTracker.this.fire();
-            }
+    private void notifyFired() {
+        if (impressionTrackerListener != null) {
+            impressionTrackerListener.onImpressionTrackerFired();
         }
+    }
+
+    String getUrl() {
+        return url;
     }
 
 }

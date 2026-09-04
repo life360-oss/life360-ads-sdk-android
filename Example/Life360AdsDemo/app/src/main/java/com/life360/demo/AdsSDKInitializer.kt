@@ -14,8 +14,8 @@ object AdsSDKInitializer {
     private const val ACCOUNT_ID = "test-account"
 
     // If using local Prebid development server
-    private const val USE_LOCAL_HOST = true
-    private const val USE_CHARLES = true
+    private const val USE_LOCAL_HOST = false
+    private const val USE_CHARLES = false
     private const val LIFE360_DEV_HOST = "prebid-server.dev.life360.com"
 
     private const val TAG = "Life360AdsDemo"

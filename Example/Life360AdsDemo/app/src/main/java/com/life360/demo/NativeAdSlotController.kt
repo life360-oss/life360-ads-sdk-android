@@ -1,6 +1,7 @@
 package com.life360.demo
 
 import android.app.Activity
+import android.util.Log
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +22,7 @@ import org.prebid.mobile.ResultCode
 class NativeAdSlotController(private val activity: Activity) : AdSlotController {
     override val config = TabConfiguration.NATIVE
 
-    private val configId = "test-imp-id-native"
+    private val configId = "test-imp-id-native-omid"
 
     override var state: AdSlotState by mutableStateOf(AdSlotState.Idle)
         private set
@@ -31,6 +32,9 @@ class NativeAdSlotController(private val activity: Activity) : AdSlotController 
      * timer and detach its click handler. */
     var contentView: NativeAdContentView? by mutableStateOf(null)
         private set
+
+    /** Held so [destroy] can end the ad's tracking, which outlives the composable that shows it. */
+    private var registeredAd: PrebidNativeAd? = null
 
     override fun load() {
         if (contentView != null) return
@@ -78,6 +82,10 @@ class NativeAdSlotController(private val activity: Activity) : AdSlotController 
     }
 
     override fun destroy() {
+        // Ends the Open Measurement session with the view it measures, rather than leaving the
+        // verification script reporting on a discarded view.
+        registeredAd?.destroy()
+        registeredAd = null
         contentView = null
         state = AdSlotState.Idle
     }
@@ -85,14 +93,21 @@ class NativeAdSlotController(private val activity: Activity) : AdSlotController 
     private fun render(ad: PrebidNativeAd) {
         val view = NativeAdContentView(activity)
         view.bind(ad)
+
+        // Required, not optional: registerView is what starts the SDK's viewability timer, attaches the
+        // click handler, and opens the Open Measurement session. Binding alone renders an untracked ad.
+        val registered = ad.registerView(view, view.clickableViews, nativeAdEventListener)
+        Log.d(TAG, "[Native] registerView ${if (registered) "succeeded" else "failed"}")
+
+        registeredAd = ad
         contentView = view
         state = AdSlotState.Loaded
     }
 
     private val nativeAdEventListener = object : PrebidNativeAdEventListener {
-        override fun onAdClicked() {}
-        override fun onAdImpression() {}
-        override fun onAdExpired() {}
+        override fun onAdClicked() { Log.d(TAG, "[Native] onAdClicked") }
+        override fun onAdImpression() { Log.d(TAG, "[Native] onAdImpression") }
+        override fun onAdExpired() { Log.d(TAG, "[Native] onAdExpired") }
     }
 
     /** Assets the demo asks for. All optional except the title so a partial-asset bid still renders
