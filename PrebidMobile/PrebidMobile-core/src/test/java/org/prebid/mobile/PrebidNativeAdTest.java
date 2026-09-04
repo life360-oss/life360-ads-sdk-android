@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,18 +15,20 @@ import android.app.Application;
 import android.content.Context;
 import android.view.View;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
+import com.life360.ads.om.NativeOMResource;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.ntv.NativeEventTracker;
 import org.prebid.mobile.rendering.utils.helpers.VisibilityChecker;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
+import org.prebid.mobile.rendering.session.manager.OmAdSessionManager;
 import org.prebid.mobile.reflection.Reflection;
 import org.prebid.mobile.test.utils.ResourceUtils;
 import org.robolectric.RobolectricTestRunner;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,16 @@ import java.util.Set;
 @RunWith(RobolectricTestRunner.class)
 public class PrebidNativeAdTest {
 
+    /**
+     * registerView() starts an Open Measurement session, which builds the JSLibraryManager singleton from
+     * the mocked view's Context. Left in place it would outlive this class and starve later tests of assets.
+     */
+    @After
+    public void cleanUp() throws IllegalAccessException {
+        org.prebid.mobile.test.utils.WhiteBox.setStaticVariableTo(
+                org.prebid.mobile.rendering.sdk.JSLibraryManager.class, "sInstance", null);
+    }
+
     @Test
     public void registerView_withAllTrackers() {
         PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
@@ -43,17 +54,14 @@ public class PrebidNativeAdTest {
         assertEquals("https://prebid.qa.openx.net//event?t=win&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308", nativeAd.getWinEvent());
         assertEquals("https://prebid.qa.openx.net//event?t=imp&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308", nativeAd.getImpEvent());
 
-        // The fixture's only eventtracker declares event 555 (OMID), so it lands in its own group and is
-        // still fetched as though it were a pixel. That is pre-existing behaviour and wrong — the url is a
-        // verification script — but routing it to Open Measurement instead is a separate change; here it
-        // only has to be grouped by the event type it declared rather than lumped in with the impression.
-        List<String> omidUrls = reflectEventTrackerUrls(nativeAd, NativeEventTracker.EventType.OMID);
-        assertNotNull(omidUrls);
-        assertThat(omidUrls, hasItem("https://s3-us-west-2.amazonaws.com/omsdk-files/compliance-js/omid-validation-verification-script-v1.js"));
-
+        // The fixture's only eventtracker is the OMID verification script (event 555, method 2). It is a
+        // script for the OM SDK to load, so it must not become an impression pixel — fetching it once over
+        // HTTP neither measures anything nor is an impression any vendor recorded. Prebid's own imp event
+        // is all that is left on the impression threshold.
         List<String> impressionUrls =
                 reflectEventTrackerUrls(nativeAd, NativeEventTracker.EventType.IMPRESSION);
         assertNotNull(impressionUrls);
+        assertEquals(1, impressionUrls.size());
         assertThat(impressionUrls, hasItem("https://prebid.qa.openx.net//event?t=imp&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308"));
 
 
@@ -61,31 +69,56 @@ public class PrebidNativeAdTest {
 
 
         assertEquals(
-                new java.util.LinkedHashSet<>(java.util.Arrays.asList(
-                        NativeEventTracker.EventType.OMID,
-                        NativeEventTracker.EventType.IMPRESSION
-                )),
+                java.util.Collections.singleton(NativeEventTracker.EventType.IMPRESSION),
                 reflectTrackedEventTypes(nativeAd)
         );
     }
 
+    /**
+     * The OMID tracker is the only one the pixel path skips. A plain JS impression tracker still has to be
+     * fired, or narrowing the OM predicate would silently lose impressions instead of measuring them.
+     */
     @Test
-    public void onVisibilityEvent_impressionThresholdNotifiesListener() {
+    public void create_keepsNonOmidTrackersOnThePixelPath() {
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/MixedEventTrackers.json");
+
+        List<String> impressionUrls =
+                reflectEventTrackerUrls(nativeAd, NativeEventTracker.EventType.IMPRESSION);
+        assertNotNull(impressionUrls);
+        assertThat(impressionUrls, hasItem("https://example.com/pixel.gif"));
+        assertThat(impressionUrls, hasItem("https://example.com/imp-tracker.js"));
+
+        // ...while the event 555 resource went to Open Measurement instead.
+        NativeOMResource resource = Reflection.getFieldOf(nativeAd, "omResource");
+        assertNotNull(resource);
+        assertEquals("iabtechlab.com-omid", resource.getVendorKey());
+    }
+
+    /**
+     * The impression threshold is what signals Open Measurement and the publisher callback. Firing once per
+     * threshold is the tracker's job — it flips its own per-option isImpressionTracked before reporting — so
+     * what matters here is that the right event type triggers the right side effects.
+     */
+    @Test
+    public void onVisibilityEvent_impressionThresholdSignalsOmAndListener() {
         PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
         PrebidNativeAdEventListener listener = mock(PrebidNativeAdEventListener.class);
+        Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
         Reflection.setVariableTo(nativeAd, "listener", listener);
 
         nativeAd.onVisibilityEvent(
                 visibilityResult(NativeEventTracker.EventType.IMPRESSION, true, true));
 
+        verify(sessionManager).registerImpression();
         verify(listener).onAdImpression();
     }
 
     @Test
-    public void onVisibilityEvent_belowThresholdNotifiesNothing() {
+    public void onVisibilityEvent_belowThresholdSignalsNothing() {
         PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
-        PrebidNativeAdEventListener listener = mock(PrebidNativeAdEventListener.class);
-        Reflection.setVariableTo(nativeAd, "listener", listener);
+        OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
+        Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
 
         // Visible, but the dwell has not elapsed.
         nativeAd.onVisibilityEvent(
@@ -94,19 +127,25 @@ public class PrebidNativeAdTest {
         nativeAd.onVisibilityEvent(
                 visibilityResult(NativeEventTracker.EventType.IMPRESSION, false, true));
 
-        verify(listener, never()).onAdImpression();
+        verify(sessionManager, never()).registerImpression();
     }
 
-    /** A viewability threshold is not an impression, so it must not raise the impression callback. */
+    /**
+     * A viewability threshold is not an impression. Signalling Open Measurement when MRC50 is reached would
+     * report a viewable impression as though the ad had only just rendered.
+     */
     @Test
-    public void onVisibilityEvent_viewabilityThresholdDoesNotNotifyListener() {
+    public void onVisibilityEvent_viewabilityThresholdDoesNotSignalOmImpression() {
         PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
         PrebidNativeAdEventListener listener = mock(PrebidNativeAdEventListener.class);
+        Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
         Reflection.setVariableTo(nativeAd, "listener", listener);
 
         nativeAd.onVisibilityEvent(
                 visibilityResult(NativeEventTracker.EventType.VIEWABLE_MRC50, true, true));
 
+        verify(sessionManager, never()).registerImpression();
         verify(listener, never()).onAdImpression();
     }
 
@@ -154,6 +193,27 @@ public class PrebidNativeAdTest {
         when(result.isVisible()).thenReturn(isVisible);
         when(result.shouldFireImpression()).thenReturn(shouldFireImpression);
         return result;
+    }
+
+    /** The same fixture's verification script must instead reach Open Measurement as a resource. */
+    @Test
+    public void create_resolvesOpenMeasurementResourceFromEventTracker() {
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
+
+        NativeOMResource resource = (NativeOMResource) Reflection
+                .getFieldOf(nativeAd, "omResource");
+
+        assertNotNull(resource);
+        assertEquals("https://s3-us-west-2.amazonaws.com/omsdk-files/compliance-js/omid-validation-verification-script-v1.js", resource.getUrl());
+        assertEquals("iabtechlab.com-omid", resource.getVendorKey());
+        assertEquals("iabtechlab-Openx", resource.getVerificationParameters());
+    }
+
+    @Test
+    public void create_withoutVerificationScript_resolvesNoOpenMeasurementResource() {
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/WithoutTrackers.json");
+
+        assertNull(Reflection.getFieldOf(nativeAd, "omResource"));
     }
 
     @Test

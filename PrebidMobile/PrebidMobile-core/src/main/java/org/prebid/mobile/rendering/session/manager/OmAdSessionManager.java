@@ -43,6 +43,7 @@ import com.iab.omid.library.life360.adsession.media.VastProperties;
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.TargetingParams;
 import com.life360.ads.core.BuildConfig;
+import com.life360.ads.om.NativeOMResource;
 import org.prebid.mobile.rendering.models.TrackingEvent;
 import org.prebid.mobile.rendering.models.internal.InternalFriendlyObstruction;
 import org.prebid.mobile.rendering.models.internal.InternalPlayerState;
@@ -144,6 +145,33 @@ public class OmAdSessionManager {
                 Owner.JAVASCRIPT);
         AdSessionContext adSessionContext = createAdSessionContext(adView, contentUrl);
         initAdSession(adSessionConfiguration, adSessionContext);
+    }
+
+    /**
+     * Initializes a Native Display AdSession from a verification resource found in the bid response.
+     *
+     * @param resource   verification script resource the vendor's script is loaded from.
+     * @param contentUrl URL of the content the ad appears alongside, or null.
+     */
+    public void initNativeDisplayAdSession(NativeOMResource resource, String contentUrl) {
+        if (resource == null) {
+            LogUtil.error(TAG, "Failed to init native display ad session. Verification resource is null");
+            return;
+        }
+
+        List<VerificationScriptResource> verificationScriptResources =
+                createVerificationScriptResources(resource);
+        if (verificationScriptResources == null) {
+            return;
+        }
+
+        AdSessionConfiguration adSessionConfiguration = createAdSessionConfiguration(CreativeType.NATIVE_DISPLAY,
+                                                                                    ImpressionType.ONE_PIXEL,
+                                                                                    Owner.NATIVE,
+                                                                                    Owner.NONE);
+        AdSessionContext adSessionContext = createAdSessionContext(verificationScriptResources, contentUrl);
+        initAdSession(adSessionConfiguration, adSessionContext);
+        initAdEvents();
     }
 
     /**
@@ -597,17 +625,40 @@ public class OmAdSessionManager {
         List<Verification> verificationList = adVerifications.getVerifications();
 
         for (Verification verification : verificationList) {
-            final URL url = new URL(verification.getJsResource());
-            final String vendorKey = verification.getVendor();
-            final String params = verification.getVerificationParameters();
-
-            VerificationScriptResource verificationScriptResource =
-                VerificationScriptResource
-                    .createVerificationScriptResourceWithParameters(vendorKey, url, params);
-            verificationScriptResources.add(verificationScriptResource);
+            verificationScriptResources.add(createVerificationScriptResource(
+                    verification.getVendor(),
+                    new URL(verification.getJsResource()),
+                    verification.getVerificationParameters()
+            ));
         }
 
         return verificationScriptResources;
+    }
+
+    /**
+     * The native display counterpart, which unlike VAST arrives as a single already-validated resource.
+     *
+     * @return a single-element list, or null if the OM SDK rejected the resource.
+     */
+    @Nullable
+    private List<VerificationScriptResource> createVerificationScriptResources(NativeOMResource resource) {
+        try {
+            List<VerificationScriptResource> verificationScriptResources = new ArrayList<>(1);
+            verificationScriptResources.add(createVerificationScriptResource(
+                    resource.getVendorKey(),
+                    new URL(resource.getUrl()),
+                    resource.getVerificationParameters()
+            ));
+            return verificationScriptResources;
+        } catch (MalformedURLException | IllegalArgumentException e) {
+            LogUtil.error(TAG, "Failed to create verification script resource: " + Log.getStackTraceString(e));
+            return null;
+        }
+    }
+
+    private VerificationScriptResource createVerificationScriptResource(String vendorKey, URL url, String params)
+    throws IllegalArgumentException {
+        return VerificationScriptResource.createVerificationScriptResourceWithParameters(vendorKey, url, params);
     }
 
 }

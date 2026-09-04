@@ -330,6 +330,66 @@ public class BasicParameterBuilderTest {
         assertEquals(Life360Ads.version, sourceExtJson.getString("omidpv"));
     }
 
+    /**
+     * Native runs its own OM session even though it is an original-API unit, so it has to declare the
+     * partner — some exchanges return no verification resource for a request that does not.
+     */
+    @Test
+    public void sourceOmidValues_originalApiNative_defaultValues() throws JSONException {
+        AdUnitConfiguration config = new AdUnitConfiguration();
+        config.setAdFormat(AdFormat.NATIVE);
+        config.setIsOriginalAdUnit(true);
+
+        JSONObject sourceExtJson = buildSourceExt(config);
+
+        assertEquals(OmAdSessionManager.PARTNER_NAME, sourceExtJson.getString("omidpn"));
+        assertEquals(Life360Ads.version, sourceExtJson.getString("omidpv"));
+    }
+
+    /** Deliberately narrow: the other original-API formats are unchanged by that. */
+    @Test
+    public void sourceOmidValues_originalApiBanner_omitsPartner() throws JSONException {
+        AdUnitConfiguration config = new AdUnitConfiguration();
+        config.setAdFormat(AdFormat.BANNER);
+        config.setIsOriginalAdUnit(true);
+
+        JSONObject sourceExtJson = buildSourceExt(config);
+
+        assertFalse(sourceExtJson.has("omidpn"));
+        assertFalse(sourceExtJson.has("omidpv"));
+    }
+
+    @Test
+    public void sourceOmidValues_originalApiNative_userDefinedValuesWin() throws JSONException {
+        TargetingParams.setOmidPartnerName("testOmidValue");
+        TargetingParams.setOmidPartnerVersion("testOmidVersion");
+        AdUnitConfiguration config = new AdUnitConfiguration();
+        config.setAdFormat(AdFormat.NATIVE);
+        config.setIsOriginalAdUnit(true);
+
+        JSONObject sourceExtJson = buildSourceExt(config);
+
+        assertEquals("testOmidValue", sourceExtJson.getString("omidpn"));
+        assertEquals("testOmidVersion", sourceExtJson.getString("omidpv"));
+    }
+
+    /**
+     * Returns an empty object when source has no ext at all, which is what a request carrying none of these
+     * keys actually looks like — the key is omitted rather than serialized empty.
+     */
+    private JSONObject buildSourceExt(AdUnitConfiguration config) throws JSONException {
+        BasicParameterBuilder builder = new BasicParameterBuilder(config,
+            context.getResources(),
+            browserActivityAvailable
+        );
+        AdRequestInput adRequestInput = new AdRequestInput();
+        builder.appendBuilderParameters(adRequestInput);
+
+        JSONObject sourceJson = adRequestInput.getBidRequest().getSource().getJsonObject();
+        JSONObject ext = sourceJson.optJSONObject("ext");
+        return ext != null ? ext : new JSONObject();
+    }
+
     @Test
     public void whenAppendParametersAndBannerType_ImpWithValidBannerObject() throws JSONException {
         AdUnitConfiguration adConfiguration = new AdUnitConfiguration();

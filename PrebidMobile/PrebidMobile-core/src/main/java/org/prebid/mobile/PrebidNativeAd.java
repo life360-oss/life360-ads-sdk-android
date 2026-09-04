@@ -29,10 +29,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
+import com.life360.ads.om.NativeOMResource;
+import com.life360.ads.om.NativeOMUtils;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
 import org.prebid.mobile.rendering.models.ntv.NativeEventTracker;
 import org.prebid.mobile.rendering.bidding.events.EventsNotifier;
+import org.prebid.mobile.rendering.sdk.JSLibraryManager;
+import org.prebid.mobile.rendering.session.manager.OmAdSessionManager;
 import org.prebid.mobile.rendering.utils.helpers.ExternalViewerUtils;
 
 import java.lang.ref.WeakReference;
@@ -73,7 +77,12 @@ public class PrebidNativeAd {
     private ArrayList<ClickTracker> clickTrackers;
     private String winEvent;
     private String impEvent;
-    /** Drives every viewability threshold this ad tracks. */
+    /** Resolved once at parse time, because the markup is not retained past {@link #create(String)}. */
+    @Nullable
+    private NativeOMResource omResource;
+    @Nullable
+    private OmAdSessionManager omAdSessionManager;
+    /** Drives every viewability threshold this ad tracks, the OMID impression included. */
     @Nullable
     private Life360CreativeVisibilityTracker visibilityTracker;
     private boolean omImpressionTracked;
@@ -171,6 +180,13 @@ public class PrebidNativeAd {
                     JSONArray eventtrackers = nativeObj.getJSONArray("eventtrackers");
                     for (int count = 0; count < eventtrackers.length(); count++) {
                         JSONObject eventtracker = eventtrackers.getJSONObject(count);
+                        // An OMID tracker's url is a verification script for the OM SDK to load, not an
+                        // image pixel — fetching it here would both miss the measurement and count as an
+                        // impression the vendor never recorded. Every other tracker, JS ones included,
+                        // stays on this path.
+                        if (NativeOMUtils.isOmidEventTracker(eventtracker)) {
+                            continue;
+                        }
                         if (eventtracker.has("url")) {
                             String impUrl = eventtracker.getString("url");
                             if (impUrl.contains("{AUCTION_PRICE}") && details.has("price")) {
@@ -188,6 +204,7 @@ public class PrebidNativeAd {
                     String url = nativeObj.getString("privacy");
                     ad.setPrivacyUrl(url);
                 }
+                ad.omResource = NativeOMUtils.verificationResource(nativeObj);
                 parseEvents(details, ad);
                 if (ad.impEvent != null) {
                     ad.addEventTrackerUrl(NativeEventTracker.EventType.IMPRESSION, ad.impEvent);
@@ -349,6 +366,7 @@ public class PrebidNativeAd {
         if (!expired && container != null) {
             this.listener = listener;
 
+            setupOmSession(container);
             startViewabilityTracking(container);
 
             registeredView = new WeakReference<>(container);
@@ -368,7 +386,42 @@ public class PrebidNativeAd {
     }
 
     /**
-     * Starts viewability tracking, one threshold per event type the response declared.
+     * Starts an Open Measurement session against the view the app just registered.
+     * <p>
+     * Native display has no WebView for the OM SDK to instrument, so the session is handed the app-built
+     * view directly. The session is declared {@link com.iab.omid.library.life360.adsession.ImpressionType#BEGIN_TO_RENDER},
+     * so the impression is signalled here at render rather than on the viewability timer that gates the
+     * pixel trackers — OMID's own script derives viewability from the registered view's geometry, which is
+     * the measurement being delegated to it.
+     */
+    private void setupOmSession(View container) {
+        if (omResource == null) {
+            // Most demand carries no OM resource at all, so this is the normal path, not a failure.
+            return;
+        }
+
+        OmAdSessionManager sessionManager = OmAdSessionManager.createNewInstance(
+                JSLibraryManager.getInstance(container.getContext())
+        );
+        if (sessionManager == null) {
+            LogUtil.error(TAG, "Open Measurement is unavailable, native display measurement will not be reported");
+            return;
+        }
+
+        // Order is prescribed by the IAB integration guide: register the view, start, then signal.
+        sessionManager.initNativeDisplayAdSession(omResource, null);
+        sessionManager.registerAdView(container);
+        sessionManager.startAdSession();
+        sessionManager.displayAdLoaded();
+
+        omAdSessionManager = sessionManager;
+        LogUtil.debug(TAG, "Open Measurement native display session started, vendor " + omResource.getVendorKey());
+    }
+
+    /**
+     * Starts viewability tracking for every threshold this ad needs: one per event type the response
+     * declared, plus the impression threshold when Open Measurement is running, so the OMID impression has a
+     * trigger even for a response that carries no impression pixel of its own.
      * <p>
      * A single tracker serves them all — it evaluates each option independently and reports which one fired,
      * so nothing has to reconcile several engines with different ideas of when the ad was seen.
@@ -378,6 +431,10 @@ public class PrebidNativeAd {
         for (NativeEventTracker.EventType eventType : eventTrackerUrls.keySet()) {
             options.add(new VisibilityTrackerOption(eventType));
         }
+        if (omAdSessionManager != null) {
+            options.add(new VisibilityTrackerOption(NativeEventTracker.EventType.IMPRESSION));
+        }
+
         if (options.isEmpty()) {
             return;
         }
@@ -390,7 +447,7 @@ public class PrebidNativeAd {
 
     /**
      * Fires whatever the event type that just met its threshold is owed: the response's trackers for that
-     * type, and on the impression threshold the publisher callback.
+     * type, and on the impression threshold the OMID impression and the publisher callback.
      */
     @VisibleForTesting
     void onVisibilityEvent(VisibilityTrackerResult result) {
@@ -403,8 +460,14 @@ public class PrebidNativeAd {
 
         fireEventTrackers(eventType);
 
-        if (eventType == NativeEventTracker.EventType.IMPRESSION && listener != null) {
-            listener.onAdImpression();
+        if (eventType == NativeEventTracker.EventType.IMPRESSION) {
+            if (omAdSessionManager != null) {
+                LogUtil.debug(TAG, "Open Measurement impression fired");
+                omAdSessionManager.registerImpression();
+            }
+            if (listener != null) {
+                listener.onAdImpression();
+            }
         }
     }
 
@@ -447,22 +510,26 @@ public class PrebidNativeAd {
     }
 
     /**
-     * Stops the viewability tracker. Without this it keeps walking the view hierarchy for a view the app has
-     * already discarded, so it must run on every teardown path.
+     * Ends the Open Measurement session. Without this the verification script keeps reporting on a view the
+     * app has already discarded, so it must run on every teardown path.
      */
-    private void stopViewabilityTracking() {
+    private void stopOmSession() {
         if (visibilityTracker != null) {
             visibilityTracker.stopVisibilityCheck();
             visibilityTracker = null;
+        }
+        if (omAdSessionManager != null) {
+            omAdSessionManager.stopAdSession();
+            omAdSessionManager = null;
         }
     }
 
     /**
      * Releases the tracking this ad holds on the registered view. Apps that swap a native ad out of a reused
-     * container should call this, otherwise the tracker outlives the ad it measures.
+     * container should call this, otherwise the Open Measurement session outlives the ad it measures.
      */
     public void destroy() {
-        stopViewabilityTracking();
+        stopOmSession();
         registeredView = null;
         listener = null;
     }
@@ -543,7 +610,7 @@ public class PrebidNativeAd {
                 ad.listener.onAdExpired();
             }
             ad.expired = true;
-            ad.stopViewabilityTracking();
+            ad.stopOmSession();
             ad.clickTrackers = null;
             ad.listener = null;
         }

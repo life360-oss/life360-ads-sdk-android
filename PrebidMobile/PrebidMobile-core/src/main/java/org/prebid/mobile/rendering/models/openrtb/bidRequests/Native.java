@@ -15,20 +15,24 @@ public class Native extends BaseBid {
 
     private JSONObject request;
     private Ext ext;
+    private List<Integer> api;
 
     // Won't be implemented in 1.1
-    private int[] api;
     private int[] battr;
 
     public JSONObject getJsonObject() throws JSONException {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("request", request.toString());
         jsonObject.put("ver", PrebidMobile.NATIVE_VERSION);
+        if (api != null && !api.isEmpty()) {
+            jsonObject.put("api", new JSONArray(api));
+        }
         jsonObject.putOpt("ext", ext != null ? ext.getJsonObject() : null);
         return jsonObject;
     }
 
     public void setRequestFrom(NativeAdUnitConfiguration config) {
+        api = config.getApi();
         request = new JSONObject();
         try {
             request.put("ver", PrebidMobile.NATIVE_VERSION);
