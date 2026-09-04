@@ -24,15 +24,24 @@ import android.text.TextUtils;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import com.life360.ads.exposure.Life360CreativeVisibilityTracker;
+import org.prebid.mobile.rendering.models.internal.VisibilityTrackerOption;
+import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
+import org.prebid.mobile.rendering.models.ntv.NativeEventTracker;
 import org.prebid.mobile.rendering.bidding.events.EventsNotifier;
 import org.prebid.mobile.rendering.utils.helpers.ExternalViewerUtils;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Response native ad object for all assets.
@@ -41,24 +50,33 @@ public class PrebidNativeAd {
 
     private static final String TAG = "PrebidNativeAd";
 
+    /** OpenRTB native `eventtrackers[].event` value for a plain impression. */
+    private static final int IMPRESSION_EVENT_TYPE_ID = 1;
+
     private boolean impressionIsNotNotified = true;
 
     private final ArrayList<NativeTitle> titles = new ArrayList<>();
     private final ArrayList<NativeImage> images = new ArrayList<>();
     private final ArrayList<NativeData> dataList = new ArrayList<>();
     private String clickUrl;
-    @Nullable
-    private ArrayList<String> imp_trackers;
+    /**
+     * The response's event trackers, grouped by the event type each one declared. Each group fires at its own
+     * viewability threshold, so an `event: 1` pixel and an `event: 2` MRC50 pixel in the same response are no
+     * longer both fired the moment the first threshold is met.
+     */
+    private final Map<NativeEventTracker.EventType, List<String>> eventTrackerUrls = new LinkedHashMap<>();
     @Nullable
     private ArrayList<String> click_trackers;
-    private VisibilityDetector visibilityDetector;
     private boolean expired;
     private WeakReference<View> registeredView;
     private PrebidNativeAdEventListener listener;
-    private ArrayList<ImpressionTracker> impressionTrackers;
     private ArrayList<ClickTracker> clickTrackers;
     private String winEvent;
     private String impEvent;
+    /** Drives every viewability threshold this ad tracks. */
+    @Nullable
+    private Life360CreativeVisibilityTracker visibilityTracker;
+    private boolean omImpressionTracked;
     @Nullable
     private String privacyUrl;
 
@@ -151,17 +169,17 @@ public class PrebidNativeAd {
 
                 if (nativeObj.has("eventtrackers")) {
                     JSONArray eventtrackers = nativeObj.getJSONArray("eventtrackers");
-                    if (eventtrackers.length() > 0) {
-                        ad.imp_trackers = new ArrayList<>();
-                        for (int count = 0; count < eventtrackers.length(); count++) {
-                            JSONObject eventtracker = eventtrackers.getJSONObject(count);
-                            if (eventtracker.has("url")) {
-                                String impUrl = eventtracker.getString("url");
-                                if (impUrl.contains("{AUCTION_PRICE}") && details.has("price")) {
-                                    impUrl = impUrl.replace("{AUCTION_PRICE}", details.getString("price"));
-                                }
-                                ad.imp_trackers.add(impUrl);
+                    for (int count = 0; count < eventtrackers.length(); count++) {
+                        JSONObject eventtracker = eventtrackers.getJSONObject(count);
+                        if (eventtracker.has("url")) {
+                            String impUrl = eventtracker.getString("url");
+                            if (impUrl.contains("{AUCTION_PRICE}") && details.has("price")) {
+                                impUrl = impUrl.replace("{AUCTION_PRICE}", details.getString("price"));
                             }
+                            ad.addEventTrackerUrl(
+                                    eventTypeOf(eventtracker.optInt("event", IMPRESSION_EVENT_TYPE_ID)),
+                                    impUrl
+                            );
                         }
                     }
                 }
@@ -171,6 +189,9 @@ public class PrebidNativeAd {
                     ad.setPrivacyUrl(url);
                 }
                 parseEvents(details, ad);
+                if (ad.impEvent != null) {
+                    ad.addEventTrackerUrl(NativeEventTracker.EventType.IMPRESSION, ad.impEvent);
+                }
                 return ad;
             } catch (JSONException e) {
                 e.printStackTrace();
@@ -327,12 +348,8 @@ public class PrebidNativeAd {
         }
         if (!expired && container != null) {
             this.listener = listener;
-            visibilityDetector = VisibilityDetector.create(container);
-            if (visibilityDetector == null) {
-                return false;
-            }
 
-            createImpressionTrackers(container);
+            startViewabilityTracking(container);
 
             registeredView = new WeakReference<>(container);
 
@@ -350,32 +367,104 @@ public class PrebidNativeAd {
         return false;
     }
 
-    private void createImpressionTrackers(View view) {
-        ArrayList<String> combinedImpTrackers = new ArrayList<>();
-        if (imp_trackers != null) {
-            combinedImpTrackers.addAll(imp_trackers);
+    /**
+     * Starts viewability tracking, one threshold per event type the response declared.
+     * <p>
+     * A single tracker serves them all — it evaluates each option independently and reports which one fired,
+     * so nothing has to reconcile several engines with different ideas of when the ad was seen.
+     */
+    private void startViewabilityTracking(View container) {
+        Set<VisibilityTrackerOption> options = new LinkedHashSet<>();
+        for (NativeEventTracker.EventType eventType : eventTrackerUrls.keySet()) {
+            options.add(new VisibilityTrackerOption(eventType));
         }
-        if (impEvent != null) {
-            combinedImpTrackers.add(impEvent);
+        if (options.isEmpty()) {
+            return;
         }
 
-        impressionTrackers = new ArrayList<>();
-        for (String url : combinedImpTrackers) {
-            ImpressionTracker impressionTracker = ImpressionTracker.create(url, visibilityDetector, view.getContext(), new ImpressionTrackerListener() {
-                @Override
-                public void onImpressionTrackerFired() {
-                    if (listener != null) {
-                        listener.onAdImpression();
-                    }
-                }
-            });
-            impressionTrackers.add(impressionTracker);
+        Life360CreativeVisibilityTracker tracker = new Life360CreativeVisibilityTracker(container, options);
+        tracker.setVisibilityTrackerListener(this::onVisibilityEvent);
+        tracker.startVisibilityCheck(container.getContext());
+        visibilityTracker = tracker;
+    }
+
+    /**
+     * Fires whatever the event type that just met its threshold is owed: the response's trackers for that
+     * type, and on the impression threshold the publisher callback.
+     */
+    @VisibleForTesting
+    void onVisibilityEvent(VisibilityTrackerResult result) {
+        if (!result.shouldFireImpression() || !result.isVisible()) {
+            return;
+        }
+
+        NativeEventTracker.EventType eventType = result.getEventType();
+        LogUtil.debug(TAG, "Viewability threshold met for " + eventType);
+
+        fireEventTrackers(eventType);
+
+        if (eventType == NativeEventTracker.EventType.IMPRESSION && listener != null) {
+            listener.onAdImpression();
         }
     }
 
-    protected boolean registerPrebidNativeAdEventListener(PrebidNativeAdEventListener listener) {
-        this.listener = listener;
-        return true;
+    private void fireEventTrackers(NativeEventTracker.EventType eventType) {
+        List<String> urls = eventTrackerUrls.get(eventType);
+        if (urls == null) {
+            return;
+        }
+
+        View view = registeredView != null ? registeredView.get() : null;
+        if (view == null) {
+            LogUtil.error(TAG, "Failed to fire event trackers for " + eventType + ". Registered view is gone");
+            return;
+        }
+
+        for (String url : urls) {
+            ImpressionTracker.createAndFire(url, view.getContext(), null);
+        }
+    }
+
+    private void addEventTrackerUrl(NativeEventTracker.EventType eventType, String url) {
+        List<String> urls = eventTrackerUrls.get(eventType);
+        if (urls == null) {
+            urls = new ArrayList<>();
+            eventTrackerUrls.put(eventType, urls);
+        }
+        urls.add(url);
+    }
+
+    /**
+     * Falls back to IMPRESSION for an event type the SDK has no threshold for, rather than dropping the
+     * tracker — an unfired pixel is a lost impression, and IMPRESSION is the least presumptuous threshold.
+     */
+    private static NativeEventTracker.EventType eventTypeOf(int id) {
+        NativeEventTracker.EventType eventType = NativeEventTracker.EventType.getType(id);
+        if (eventType == null || eventType == NativeEventTracker.EventType.CUSTOM) {
+            return NativeEventTracker.EventType.IMPRESSION;
+        }
+        return eventType;
+    }
+
+    /**
+     * Stops the viewability tracker. Without this it keeps walking the view hierarchy for a view the app has
+     * already discarded, so it must run on every teardown path.
+     */
+    private void stopViewabilityTracking() {
+        if (visibilityTracker != null) {
+            visibilityTracker.stopVisibilityCheck();
+            visibilityTracker = null;
+        }
+    }
+
+    /**
+     * Releases the tracking this ad holds on the registered view. Apps that swap a native ad out of a reused
+     * container should call this, otherwise the tracker outlives the ad it measures.
+     */
+    public void destroy() {
+        stopViewabilityTracking();
+        registeredView = null;
+        listener = null;
     }
 
     private boolean handleClick(View v, PrebidNativeAdEventListener listener) {
@@ -454,11 +543,7 @@ public class PrebidNativeAd {
                 ad.listener.onAdExpired();
             }
             ad.expired = true;
-            if (ad.visibilityDetector != null) {
-                ad.visibilityDetector.destroy();
-                ad.visibilityDetector = null;
-            }
-            ad.impressionTrackers = null;
+            ad.stopViewabilityTracking();
             ad.clickTrackers = null;
             ad.listener = null;
         }
