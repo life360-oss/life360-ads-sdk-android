@@ -4,8 +4,10 @@ import org.json.JSONObject;
 import org.prebid.mobile.NativeAdUnit;
 import org.prebid.mobile.NativeAsset;
 import org.prebid.mobile.NativeEventTracker;
+import org.prebid.mobile.Signals;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class NativeAdUnitConfiguration {
@@ -21,6 +23,20 @@ public class NativeAdUnitConfiguration {
     private boolean dUrlSupport = false;
     private boolean privacy = false;
     private JSONObject ext;
+    /**
+     * Sent as {@code imp.native.api}. Defaults to OMID so Open Measurement resources are actually offered —
+     * exchanges that gate verification resources on this signal return none when the field is absent, which
+     * reads as "this creative isn't measured" rather than as a missing request parameter.
+     */
+    private List<Integer> api = new ArrayList<>(Arrays.asList(Signals.Api.OMID_1.getValue()));
+
+    public List<Integer> getApi() {
+        return api;
+    }
+
+    public void setApi(List<Integer> api) {
+        this.api = api != null ? new ArrayList<>(api) : new ArrayList<>();
+    }
 
     public void addEventTracker(NativeEventTracker tracker) {
         nativeEventTrackers.add(tracker);

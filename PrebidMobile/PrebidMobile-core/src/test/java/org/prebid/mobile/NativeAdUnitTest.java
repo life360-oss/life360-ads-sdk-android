@@ -31,6 +31,51 @@ public class NativeAdUnitTest {
         NativeEventTracker.EVENT_TRACKING_METHOD.CUSTOM.setID(500);
     }
 
+    /**
+     * Exchanges that gate verification resources on this signal return none when it is absent, so the
+     * default must survive — an OM-capable native request that forgets to advertise OMID looks to the
+     * exchange like an unmeasured one.
+     */
+    @Test
+    public void nativeRequest_advertisesOmidApiByDefault() throws Exception {
+        NativeAdUnit nativeUnit = new NativeAdUnit(PBS_CONFIG_ID_NATIVE_APPNEXUS);
+
+        assertEquals(java.util.Collections.singletonList(7), nativeUnit.getApi());
+
+        org.prebid.mobile.rendering.models.openrtb.bidRequests.Native nativeObject =
+                new org.prebid.mobile.rendering.models.openrtb.bidRequests.Native();
+        nativeObject.setRequestFrom(nativeUnit.getConfiguration().getNativeConfiguration());
+
+        org.json.JSONArray api = nativeObject.getJsonObject().getJSONArray("api");
+        assertEquals(1, api.length());
+        assertEquals(7, api.getInt(0));
+    }
+
+    @Test
+    public void nativeRequest_apiCanBeOverridden() throws Exception {
+        NativeAdUnit nativeUnit = new NativeAdUnit(PBS_CONFIG_ID_NATIVE_APPNEXUS);
+        nativeUnit.setApi(new ArrayList<>(java.util.Arrays.asList(3, 7)));
+
+        org.prebid.mobile.rendering.models.openrtb.bidRequests.Native nativeObject =
+                new org.prebid.mobile.rendering.models.openrtb.bidRequests.Native();
+        nativeObject.setRequestFrom(nativeUnit.getConfiguration().getNativeConfiguration());
+
+        org.json.JSONArray api = nativeObject.getJsonObject().getJSONArray("api");
+        assertEquals(2, api.length());
+    }
+
+    @Test
+    public void nativeRequest_emptyApiIsOmitted() throws Exception {
+        NativeAdUnit nativeUnit = new NativeAdUnit(PBS_CONFIG_ID_NATIVE_APPNEXUS);
+        nativeUnit.setApi(new ArrayList<>());
+
+        org.prebid.mobile.rendering.models.openrtb.bidRequests.Native nativeObject =
+                new org.prebid.mobile.rendering.models.openrtb.bidRequests.Native();
+        nativeObject.setRequestFrom(nativeUnit.getConfiguration().getNativeConfiguration());
+
+        assertFalse(nativeObject.getJsonObject().has("api"));
+    }
+
     @Test
     public void testNativeAdUnitCreation() throws Exception {
         NativeAdUnit nativeUnit = new NativeAdUnit(PBS_CONFIG_ID_NATIVE_APPNEXUS);

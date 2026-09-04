@@ -219,6 +219,19 @@ public class NativeAdUnit extends AdUnit {
         }
     }
 
+    /**
+     * Supported API frameworks for the impression, sent as {@code imp.native.api}.
+     * Leave unset to keep the SDK default, which advertises OMID support so that the exchange offers
+     * Open Measurement verification resources.
+     */
+    public void setApi(java.util.List<Integer> api) {
+        nativeConfiguration.setApi(api);
+    }
+
+    public java.util.List<Integer> getApi() {
+        return nativeConfiguration.getApi();
+    }
+
     public void addEventTracker(NativeEventTracker tracker) {
         nativeConfiguration.addEventTracker(tracker);
     }

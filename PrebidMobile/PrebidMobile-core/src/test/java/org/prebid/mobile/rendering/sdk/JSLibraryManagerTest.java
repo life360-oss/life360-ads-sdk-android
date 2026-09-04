@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.prebid.mobile.test.utils.WhiteBox;
@@ -15,6 +16,16 @@ import org.robolectric.RuntimeEnvironment;
 
 @RunWith(RobolectricTestRunner.class)
 public class JSLibraryManagerTest {
+
+    /**
+     * The singleton caches whichever Context first reached getInstance(), and Robolectric reuses statics
+     * across test classes — so a class that built it from a mock Context would otherwise decide what these
+     * assertions see.
+     */
+    @Before
+    public void setUp() throws IllegalAccessException {
+        WhiteBox.setStaticVariableTo(JSLibraryManager.class, "sInstance", null);
+    }
 
     @After
     public void cleanUp() throws IllegalAccessException {

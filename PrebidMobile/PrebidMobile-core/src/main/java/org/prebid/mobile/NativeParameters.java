@@ -66,6 +66,14 @@ public class NativeParameters {
         nativeConfiguration.setPrivacy(privacy);
     }
 
+    /**
+     * Supported API frameworks for the impression, sent as {@code imp.native.api}.
+     * Leave unset to keep the SDK default, which advertises OMID support.
+     */
+    public void setApi(List<Integer> api) {
+        nativeConfiguration.setApi(api);
+    }
+
     public void setExt(Object jsonObject) {
         if (jsonObject instanceof JSONObject) {
             nativeConfiguration.setExt((JSONObject) jsonObject);

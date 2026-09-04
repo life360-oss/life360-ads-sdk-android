@@ -160,19 +160,24 @@ public class BasicParameterBuilder extends ParameterBuilder {
     private void configureSource(Source source, String uuid) {
         source.setTid(uuid);
 
-        boolean isNotOriginalApi = !adConfiguration.isOriginalAdUnit();
+        // Declared for every format the SDK measures itself. That is the whole rendering API, plus native
+        // among the original-API units — PrebidNativeAd opens its own OM session. Exchanges that gate
+        // verification resources on this declaration return none without it, which reads as an unmeasured
+        // creative rather than as a missing request parameter.
+        boolean declaresOmPartner = !adConfiguration.isOriginalAdUnit()
+                || adConfiguration.isAdType(AdFormat.NATIVE);
 
         String userDefinedPartnerName = TargetingParams.getOmidPartnerName();
         if (userDefinedPartnerName != null && !userDefinedPartnerName.isEmpty()) {
             source.getExt().put(KEY_OM_PARTNER_NAME, userDefinedPartnerName);
-        } else if (isNotOriginalApi) {
+        } else if (declaresOmPartner) {
             source.getExt().put(KEY_OM_PARTNER_NAME, OmAdSessionManager.PARTNER_NAME);
         }
 
         String userDefinedPartnerVersion = TargetingParams.getOmidPartnerVersion();
         if (userDefinedPartnerVersion != null && !userDefinedPartnerVersion.isEmpty()) {
             source.getExt().put(KEY_OM_PARTNER_VERSION, userDefinedPartnerVersion);
-        } else if (isNotOriginalApi) {
+        } else if (declaresOmPartner) {
             source.getExt().put(KEY_OM_PARTNER_VERSION, OmAdSessionManager.PARTNER_VERSION);
         }
     }
