@@ -10,4 +10,6 @@ ext {
     artifactFolder = "${buildDir}/generated-artifacts"
     omSdkVersion = "1.6.9"
     omSdkModuleName = "omsdk-android"
+    appHarbrVersion = "2.40.0"
+    appHarbrAdapterVersion = "2.40.0.0"
 }
