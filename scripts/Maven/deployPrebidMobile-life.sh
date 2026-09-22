@@ -85,6 +85,26 @@ while read -r line; do
 done < "../build.gradle"
 [[ -z "${OMSDK_VERSION}" ]] && { echoX "ERROR: could not read omSdkVersion from build.gradle"; exit 1; }
 
+# Read APPHARBR_VERSION from the single source of truth in build.gradle
+APPHARBR_VERSION=""
+appharbr_regex='appHarbrVersion.*=.*"(.*)"'
+while read -r line; do
+  if [[ $line =~ $appharbr_regex ]]; then
+    APPHARBR_VERSION="${BASH_REMATCH[1]}"
+  fi
+done < "../build.gradle"
+[[ -z "${APPHARBR_VERSION}" ]] && { echoX "ERROR: could not read appHarbrVersion from build.gradle"; exit 1; }
+
+# Read APPHARBR_ADAPTER_VERSION from the single source of truth in build.gradle
+APPHARBR_ADAPTER_VERSION=""
+appharbr_adapter_regex='appHarbrAdapterVersion.*=.*"(.*)"'
+while read -r line; do
+  if [[ $line =~ $appharbr_adapter_regex ]]; then
+    APPHARBR_ADAPTER_VERSION="${BASH_REMATCH[1]}"
+  fi
+done < "../build.gradle"
+[[ -z "${APPHARBR_ADAPTER_VERSION}" ]] && { echoX "ERROR: could not read appHarbrAdapterVersion from build.gradle"; exit 1; }
+
 # Use the Life360 build script (repackaging + Life360AdsSDK output names)
 bash ./buildPrebidMobile.sh
 
@@ -125,7 +145,8 @@ function replace_version_placeholder() {
   local MODIFIED_POM="$(dirname "$ORIGINAL_POM")/pom/pom.xml"
   mkdir -p "$(dirname "$ORIGINAL_POM")/pom"
 
-  awk -v VER="$REVISION" -v OMSDK_VER="$OMSDK_VERSION" '
+  awk -v VER="$REVISION" -v OMSDK_VER="$OMSDK_VERSION" -v APPHARBR_VER="$APPHARBR_VERSION" \
+      -v APPHARBR_ADAPTER_VER="$APPHARBR_ADAPTER_VERSION" '
     BEGIN { inParent=0; projectVersionDone=0 }
     {
       if ($0 ~ /<parent>/)   inParent=1
@@ -135,6 +156,8 @@ function replace_version_placeholder() {
       gsub(/<version>[[:space:]]*\$\{revision\}[[:space:]]*<\/version>/, "<version>" VER "</version>")
       gsub(/<version>[[:space:]]*\$\{project\.version\}[[:space:]]*<\/version>/, "<version>" VER "</version>")
       gsub(/\$\{omsdk\.version\}/, OMSDK_VER)
+      gsub(/\$\{appharbr\.version\}/, APPHARBR_VER)
+      gsub(/\$\{appharbr\.adapter\.version\}/, APPHARBR_ADAPTER_VER)
 
       if (!inParent && !projectVersionDone && match($0, /<version>[^<]+<\/version>/)) {
         pv = substr($0, RSTART, RLENGTH)
