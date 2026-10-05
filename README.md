@@ -92,7 +92,7 @@ scripts/testPrebidMobile.sh
 
 **Does the  Life360 Ads SDK use OMID / OMSDK?**
 
-Yes, but the SDK is not currently IAB certified. Without certification, the demand-side benefits of OMID measurement are not fully realized unless the publisher obtains their own certification.
+Yes, and the SDK is [IAB certified](https://iabtechlab.com/compliance-programs/compliant-companies/#omsdk-compliance) with partner name Life360. You can expect support for third party tracking tags for web display, web video, and native display ad types.
 
 **Does the  Life360 Ads SDK support multi-format bidding?**
 
