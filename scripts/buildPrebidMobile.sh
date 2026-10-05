@@ -69,6 +69,22 @@ while read -r line; do
   fi
 done <$LIBDIR/build.gradle
 
+appharbr_regex='appHarbrVersion.*=.*"(.*)"'
+while read -r line; do
+  if [[ $line =~ $appharbr_regex ]]; then
+    APPHARBR_VERSION=${BASH_REMATCH[1]}
+    echoX "AppHarbr v$APPHARBR_VERSION"
+  fi
+done <$LIBDIR/build.gradle
+
+appharbr_adapter_regex='appHarbrAdapterVersion.*=.*"(.*)"'
+while read -r line; do
+  if [[ $line =~ $appharbr_adapter_regex ]]; then
+    APPHARBR_ADAPTER_VERSION=${BASH_REMATCH[1]}
+    echoX "AppHarbr adapter v$APPHARBR_ADAPTER_VERSION"
+  fi
+done <$LIBDIR/build.gradle
+
 echoX "Start building  Life360 Ads SDK version $RELEASE_VERSION"
 
 ###########################
@@ -220,11 +236,14 @@ for module in "${modules[@]}"; do
   POM_OUTPUT_NAME="${module/PrebidMobile/Life360AdsSDK}"
   TEMPLATE="$POM_TEMPLATE_DIR/${module}-pom.xml"
   if [ -f "$TEMPLATE" ]; then
-    awk -v VER="$RELEASE_VERSION" -v OMSDK_VER="$OMSDK_VERSION" '
+    awk -v VER="$RELEASE_VERSION" -v OMSDK_VER="$OMSDK_VERSION" \
+        -v APPHARBR_VER="$APPHARBR_VERSION" -v APPHARBR_ADAPTER_VER="$APPHARBR_ADAPTER_VERSION" '
       { gsub(/<revision>[^<]*<\/revision>/, "<revision>" VER "<\/revision>")
         gsub(/<version>[[:space:]]*\$\{revision\}[[:space:]]*<\/version>/, "<version>" VER "<\/version>")
         gsub(/<version>[[:space:]]*\$\{project\.version\}[[:space:]]*<\/version>/, "<version>" VER "<\/version>")
         gsub(/\$\{omsdk\.version\}/, OMSDK_VER)
+        gsub(/\$\{appharbr\.version\}/, APPHARBR_VER)
+        gsub(/\$\{appharbr\.adapter\.version\}/, APPHARBR_ADAPTER_VER)
         print }
     ' "$TEMPLATE" > "$POM_OUTDIR/${POM_OUTPUT_NAME}-${RELEASE_VERSION}.pom"
     echoX "  Generated $POM_OUTDIR/${POM_OUTPUT_NAME}-${RELEASE_VERSION}.pom"

@@ -102,6 +102,8 @@ public class AdWebView extends WebView {
         } else {
             webSettings.setSupportZoom(true);
         }
+
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
     }
 
     private void calculateScaleForResize(
