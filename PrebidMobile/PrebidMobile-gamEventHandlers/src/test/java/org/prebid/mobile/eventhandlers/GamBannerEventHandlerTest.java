@@ -51,7 +51,7 @@ import org.robolectric.annotation.Config;
 import java.util.HashMap;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 23)
+@Config(sdk = 24)
 public class GamBannerEventHandlerTest {
 
     private static final String GAM_AD_UNIT_ID = "12345678";
@@ -184,6 +184,16 @@ public class GamBannerEventHandlerTest {
     public void convertGamAdSizeAndNullPassed_ReturnEmptyPrebidSizesArray() {
         AdSize[] prebidSizes = GamBannerEventHandler.convertGamAdSize(null);
         assertEquals(0, prebidSizes.length);
+    }
+
+    @Test
+    public void adManagerRequestConfiguration_DefaultsToNullAndCanBeSet() {
+        assertEquals(null, bannerEventHandler.getAdManagerRequestConfiguration());
+
+        AdManagerRequestConfiguration configuration = builder -> builder.addCustomTargeting("key", "value");
+        bannerEventHandler.setAdManagerRequestConfiguration(configuration);
+
+        assertEquals(configuration, bannerEventHandler.getAdManagerRequestConfiguration());
     }
 
     private void changeExpectingAppEventStatus(boolean status) {

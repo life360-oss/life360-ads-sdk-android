@@ -16,6 +16,7 @@
 
 package org.prebid.mobile.eventhandlers;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -46,7 +47,7 @@ import org.robolectric.annotation.Config;
 import java.util.HashMap;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 23)
+@Config(sdk = 24)
 public class GamRewardedEventHandlerTest {
 
     private static final String GAM_AD_UNIT_ID = "12345678";
@@ -171,6 +172,16 @@ public class GamRewardedEventHandlerTest {
         eventHandler.show();
 
         verify(mockEventListener).onAdFailed(any(AdException.class));
+    }
+
+    @Test
+    public void adManagerRequestConfiguration_DefaultsToNullAndCanBeSet() {
+        assertEquals(null, eventHandler.getAdManagerRequestConfiguration());
+
+        AdManagerRequestConfiguration configuration = builder -> builder.addCustomTargeting("key", "value");
+        eventHandler.setAdManagerRequestConfiguration(configuration);
+
+        assertEquals(configuration, eventHandler.getAdManagerRequestConfiguration());
     }
 
     private void changeExpectingAppEventStatus(boolean status) {

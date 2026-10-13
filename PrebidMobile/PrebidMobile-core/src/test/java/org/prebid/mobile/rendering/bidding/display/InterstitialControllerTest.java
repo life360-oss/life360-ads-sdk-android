@@ -20,6 +20,7 @@ import android.app.Activity;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.prebid.mobile.api.data.AdFormat;
@@ -96,6 +97,20 @@ public class InterstitialControllerTest {
         verify(mockInterstitialView, times(1)).destroy();
     }
 
+    @Test
+    public void destroyFromCloseCallback_DoNotNotifyUserEarnedReward() {
+        WhiteBox.setInternalState(interstitialController, "config", new AdUnitConfiguration());
+        doAnswer(invocation -> {
+            interstitialController.destroy();
+            return null;
+        }).when(mockListener).onInterstitialClosed();
+
+        getInterstitialViewListener().onAdClosed(mock(InterstitialView.class));
+
+        verify(mockListener).onInterstitialClosed();
+        verify(mockListener, never()).onUserEarnedReward();
+    }
+
     //region ===================== InterstitialViewListener tests
     @Test
     public void adDidLoad_NotifyInterstitialReadyForDisplay() {
@@ -130,6 +145,29 @@ public class InterstitialControllerTest {
         getInterstitialViewListener().onAdClosed(mock(InterstitialView.class));
 
         verify(mockListener, times(1)).onInterstitialClosed();
+    }
+
+    @Test
+    public void adInterstitialDidCloseBeforeReward_NotifyUserEarnedRewardAfterClose() {
+        WhiteBox.setInternalState(interstitialController, "config", new AdUnitConfiguration());
+
+        getInterstitialViewListener().onAdClosed(mock(InterstitialView.class));
+
+        InOrder inOrder = inOrder(mockListener);
+        inOrder.verify(mockListener).onInterstitialClosed();
+        inOrder.verify(mockListener).onUserEarnedReward();
+    }
+
+    @Test
+    public void adInterstitialDidCloseAfterReward_DoNotNotifyUserEarnedReward() {
+        AdUnitConfiguration config = new AdUnitConfiguration();
+        config.getRewardManager().setUserRewardedAlready(true);
+        WhiteBox.setInternalState(interstitialController, "config", config);
+
+        getInterstitialViewListener().onAdClosed(mock(InterstitialView.class));
+
+        verify(mockListener).onInterstitialClosed();
+        verify(mockListener, never()).onUserEarnedReward();
     }
     //endregion ===================== InterstitialViewListener tests
 

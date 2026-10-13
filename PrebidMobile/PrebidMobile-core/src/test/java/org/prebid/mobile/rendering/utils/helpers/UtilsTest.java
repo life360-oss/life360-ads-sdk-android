@@ -19,12 +19,14 @@ package org.prebid.mobile.rendering.utils.helpers;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.os.Build;
 import android.util.DisplayMetrics;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.WindowMetrics;
 import android.widget.FrameLayout;
 import androidx.test.filters.Suppress;
 import junit.framework.TestCase;
@@ -310,6 +312,45 @@ public class UtilsTest extends TestCase {
     }
 
     @Test
+    @Config(sdk = 30)
+    public void testGetScreenSizeUsesMaximumWindowMetricsFromSdkInt30() {
+        WindowManager mockWindowManager = mock(WindowManager.class);
+        WindowMetrics mockMaximumWindowMetrics = mock(WindowMetrics.class);
+
+        when(mockMaximumWindowMetrics.getBounds()).thenReturn(new Rect(0, 0, 2200, 2001));
+        when(mockWindowManager.getMaximumWindowMetrics()).thenReturn(mockMaximumWindowMetrics);
+
+        assertThat(Utils.getScreenWidth(mockWindowManager), equalTo(2200));
+        assertThat(Utils.getScreenHeight(mockWindowManager), equalTo(2001));
+        verify(mockWindowManager, never()).getCurrentWindowMetrics();
+        verify(mockWindowManager, never()).getDefaultDisplay();
+    }
+
+    @Test
+    @Config(sdk = 30)
+    public void testGetWindowSizeUsesCurrentWindowMetricsFromSdkInt30() {
+        WindowManager mockWindowManager = mock(WindowManager.class);
+        WindowMetrics mockCurrentWindowMetrics = mock(WindowMetrics.class);
+
+        when(mockCurrentWindowMetrics.getBounds()).thenReturn(new Rect(0, 0, 1100, 1001));
+        when(mockWindowManager.getCurrentWindowMetrics()).thenReturn(mockCurrentWindowMetrics);
+
+        assertThat(Utils.getWindowWidth(mockWindowManager), equalTo(1100));
+        assertThat(Utils.getWindowHeight(mockWindowManager), equalTo(1001));
+        verify(mockWindowManager, never()).getMaximumWindowMetrics();
+        verify(mockWindowManager, never()).getDefaultDisplay();
+    }
+
+    @Test
+    @Config(sdk = 30)
+    public void testGetScreenSizeReturnsZeroWithoutWindowManager() {
+        assertThat(Utils.getScreenWidth(null), equalTo(0));
+        assertThat(Utils.getScreenHeight(null), equalTo(0));
+        assertThat(Utils.getWindowWidth(null), equalTo(0));
+        assertThat(Utils.getWindowHeight(null), equalTo(0));
+    }
+
+    @Test
     public void generateSHA1ByteTest() {
         byte[] array = {1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3};
         assertNotEquals(array, Utils.generateSHA1(array));
@@ -411,7 +452,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.width);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.height);
     }
@@ -423,7 +464,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, null);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.width);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.height);
     }
@@ -437,7 +478,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, properties);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.width);
         assertEquals(FrameLayout.LayoutParams.WRAP_CONTENT, params.height);
     }
@@ -451,7 +492,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, properties);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
         assertEquals(216, params.width);
         assertEquals(216, params.height);
         assertEquals(43, closeView.getPaddingTop());
@@ -466,7 +507,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, properties);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.START | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.LEFT | Gravity.TOP, params.gravity);
     }
 
     @Test
@@ -478,7 +519,7 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, properties);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
     }
 
     @Test
@@ -488,7 +529,17 @@ public class UtilsTest extends TestCase {
         View closeView = Utils.createCloseView(activity, null);
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) (closeView.getLayoutParams());
 
-        assertEquals(Gravity.END | Gravity.TOP, params.gravity);
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
+    }
+
+    @Test
+    public void createSoundView_PositionsControlAtTopRight() {
+        Activity activity = Robolectric.buildActivity(Activity.class).get();
+
+        View soundView = Utils.createSoundView(activity);
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) soundView.getLayoutParams();
+
+        assertEquals(Gravity.RIGHT | Gravity.TOP, params.gravity);
     }
 
     @Test
