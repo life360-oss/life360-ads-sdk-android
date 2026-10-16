@@ -22,10 +22,10 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import org.prebid.mobile.LogUtil;
-import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRegister;
-import org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRenderer;
+import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
+import org.prebid.mobile.rendering.bidding.display.PluginRendererFactory;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayVideoListener;
 import org.prebid.mobile.rendering.bidding.listeners.DisplayViewListener;
 import org.prebid.mobile.rendering.networking.WinNotifier;
@@ -33,6 +33,10 @@ import org.prebid.mobile.rendering.views.webview.WebViewBase;
 
 /**
  * Internal view for {@link BannerView}.
+ * <p>
+ * Renders against its own copy of the ad unit's configuration. The creative pipeline rewrites the
+ * configuration it is given, so sharing the ad unit's instance would narrow a multiformat ad unit
+ * to the winning creative's format and break the following auctions.
  */
 public class DisplayView extends FrameLayout implements WebViewProvider {
     private View adView;
@@ -48,7 +52,7 @@ public class DisplayView extends FrameLayout implements WebViewProvider {
     ) {
         super(context);
 
-        this.adUnitConfiguration = adUnitConfiguration;
+        this.adUnitConfiguration = new AdUnitConfiguration(adUnitConfiguration);
         this.displayViewListener = displayViewListener;
 
         createBannerAdView(context, bidResponse);
@@ -63,7 +67,7 @@ public class DisplayView extends FrameLayout implements WebViewProvider {
     ) {
         super(context);
 
-        this.adUnitConfiguration = adUnitConfiguration;
+        this.adUnitConfiguration = new AdUnitConfiguration(adUnitConfiguration);
         this.displayViewListener = displayViewListener;
         this.displayVideoListener = displayVideoListener;
 
@@ -74,15 +78,42 @@ public class DisplayView extends FrameLayout implements WebViewProvider {
             @NonNull Context context,
             @NonNull BidResponse bidResponse
     ) {
+        if (PluginRendererFactory.preferredRendererSendsWinNotice(bidResponse, adUnitConfiguration)) {
+            addBannerAdView(context, bidResponse);
+            return;
+        }
+
         WinNotifier winNotifier = new WinNotifier();
-        winNotifier.notifyWin(bidResponse, () -> {
-            PrebidMobilePluginRenderer plugin = PrebidMobilePluginRegister.getInstance().getPluginForPreferredRenderer(bidResponse);
-            if (plugin != null) {
-                adUnitConfiguration.modifyUsingBidResponse(bidResponse);
-                adView = plugin.createBannerAdView(context, displayViewListener, displayVideoListener, adUnitConfiguration, bidResponse);
-                addView(adView);
-            }
-        });
+        winNotifier.notifyWin(bidResponse, () -> addBannerAdView(context, bidResponse));
+    }
+
+    private void addBannerAdView(
+            @NonNull Context context,
+            @NonNull BidResponse bidResponse
+    ) {
+        adView = PluginRendererFactory.createBannerAdView(
+                context,
+                displayViewListener,
+                displayVideoListener,
+                adUnitConfiguration,
+                bidResponse
+        );
+        if (adView != null) {
+            addView(adView);
+        } else {
+            displayViewListener.onAdFailed(new AdException(
+                    AdException.INTERNAL_ERROR,
+                    "Renderer returned null banner view"
+            ));
+        }
+    }
+
+    /**
+     * True while the rendered creative is a video that is currently playing. A creative that does
+     * not report playback, such as an HTML creative or a third party plugin renderer, reports false.
+     */
+    public boolean isVideoPlaying() {
+        return adView instanceof PrebidDisplayView && ((PrebidDisplayView) adView).isVideoPlaying();
     }
 
     public void destroy() {

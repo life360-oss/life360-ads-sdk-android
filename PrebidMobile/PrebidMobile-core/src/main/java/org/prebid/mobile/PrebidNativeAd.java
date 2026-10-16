@@ -534,6 +534,11 @@ public class PrebidNativeAd {
         listener = null;
     }
 
+    protected boolean registerPrebidNativeAdEventListener(PrebidNativeAdEventListener listener) {
+        this.listener = listener;
+        return true;
+    }
+
     private boolean handleClick(View v, PrebidNativeAdEventListener listener) {
         if (clickUrl == null || clickUrl.isEmpty()) {
             return false;
@@ -601,10 +606,8 @@ public class PrebidNativeAd {
         public void onCacheExpired() {
             LogUtil.error(TAG, "Cache expired");
             WeakReference<View> weakReference = ad.registeredView;
-            if (weakReference == null) return;
-
-            View view = weakReference.get();
-            if (view != null) return;
+            // Only a live registered view keeps the ad; never-registered ads expire too.
+            if (weakReference != null && weakReference.get() != null) return;
 
             if (ad.listener != null) {
                 ad.listener.onAdExpired();

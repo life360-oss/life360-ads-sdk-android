@@ -23,10 +23,15 @@ import org.junit.After
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.prebid.mobile.CacheManager
 import org.prebid.mobile.NativeAdUnit
+import org.prebid.mobile.Util
+import org.prebid.mobile.eventhandlers.nextgen.NextGenAdRequestConfiguration
 import org.prebid.mobile.eventhandlers.nextgen.utils.Utils.didPrebidWin
+import org.prebid.mobile.rendering.bidding.data.bid.Bid
+import org.prebid.mobile.rendering.bidding.data.bid.Prebid
 import org.prebid.mobile.rendering.utils.ntv.NativeAdProvider
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -103,6 +108,27 @@ class UtilsTest {
     }
 
     @Test
+    fun configureAdRequest_WithConfigurationAndBid_AppliesConfigurationBeforePrebidTargeting() {
+        val mockBuilder = Mockito.mock(BaseAdRequestBuilder::class.java)
+        val configuration = Mockito.mock(NextGenAdRequestConfiguration::class.java)
+        val mockBid = Mockito.mock(Bid::class.java)
+        val mockPrebid = Mockito.mock(Prebid::class.java)
+        val targeting = hashMapOf("hb_pb" to "1.50", "hb_cache_id" to "prebid-cache-id")
+        Mockito.`when`(mockBid.prebid).thenReturn(mockPrebid)
+        Mockito.`when`(mockPrebid.targeting).thenReturn(targeting)
+
+        Utils.configureAdRequest(mockBuilder, mockBid, configuration)
+
+        val inOrder = Mockito.inOrder(configuration, mockBuilder)
+        inOrder.verify(configuration).configure(mockBuilder)
+        inOrder.verify(mockBuilder, Mockito.times(2))
+            .putCustomTargeting(ArgumentMatchers.anyString(), ArgumentMatchers.anyString())
+        Mockito.verify(mockBuilder).putCustomTargeting("hb_pb", "1.50")
+        Mockito.verify(mockBuilder).putCustomTargeting("hb_cache_id", "prebid-cache-id")
+        Assert.assertTrue(Utils.RESERVED_KEYS.containsAll(listOf("hb_pb", "hb_cache_id")))
+    }
+
+    @Test
     fun nativeAdProvider_putExtrasWithCacheId_returnNativeAd() {
         val cacheId = CacheManager.save(this.nativeAdContent)
         val extras = Bundle()
@@ -117,6 +143,14 @@ class UtilsTest {
         val extras = Bundle()
         val prebidNativeAd = NativeAdProvider.getNativeAd(extras)
         Assert.assertNull(prebidNativeAd)
+    }
+
+    @Test
+    fun handleCustomTargetingHandling_nullableBids_DoNothing() {
+        val mockBuilder = Mockito.mock(BaseAdRequestBuilder::class.java)
+
+        Util.apply(null, mockBuilder)
+        Mockito.verifyNoInteractions(mockBuilder)
     }
 
     private val nativeAdContent: String

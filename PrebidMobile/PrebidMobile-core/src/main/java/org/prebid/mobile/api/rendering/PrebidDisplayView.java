@@ -66,6 +66,8 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
     @Nullable
     private VideoView videoView;
 
+    private boolean isAdLoadedNotificationPending;
+
     @Nullable
     private EventForwardingLocalBroadcastReceiver eventForwardingReceiver;
     private final EventForwardingLocalBroadcastReceiver.EventForwardingBroadcastListener broadcastListener = this::handleBroadcastAction;
@@ -74,7 +76,7 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
         @Override
         public void adLoaded(AdDetails adDetails) {
             // for banner adViewManager.show() will be called automatically
-            notifyListenerLoaded();
+            isAdLoadedNotificationPending = true;
         }
 
         @Override
@@ -82,6 +84,7 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
             removeAllViews();
             creative.setContentDescription(CONTENT_DESCRIPTION_AD_VIEW);
             addView(creative);
+            notifyListenerLoadedIfNeeded();
             notifyListenerDisplayed();
         }
 
@@ -180,6 +183,9 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
         this.displayVideoListener = displayVideoListener;
         try {
             adUnitConfiguration.modifyUsingBidResponse(response);
+            // The configuration is shared across refreshes of a multiformat banner, so this must
+            // track the format of the current winning bid instead of latching to true.
+            adUnitConfiguration.setBuiltInVideo(response.isVideo());
             if (response.isVideo()) {
                 displayVideoAd(response);
             } else {
@@ -223,6 +229,7 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
         adUnitConfiguration = null;
         displayViewListener = null;
         interstitialManager = null;
+        isAdLoadedNotificationPending = false;
         if (videoView != null) {
             videoView.destroy();
         }
@@ -234,6 +241,13 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
             eventForwardingReceiver.unregister(eventForwardingReceiver);
             eventForwardingReceiver = null;
         }
+    }
+
+    /**
+     * True while a rendered video creative is playing. An HTML creative always reports false.
+     */
+    public boolean isVideoPlaying() {
+        return videoView != null && videoView.isVideoPlaybackInProgress();
     }
 
     private void displayHtmlAd(BidResponse response) throws AdException {
@@ -287,6 +301,15 @@ public class PrebidDisplayView extends FrameLayout implements PrebidDestroyable,
         if (displayViewListener != null) {
             displayViewListener.onAdLoaded();
         }
+    }
+
+    private void notifyListenerLoadedIfNeeded() {
+        if (!isAdLoadedNotificationPending) {
+            return;
+        }
+
+        isAdLoadedNotificationPending = false;
+        notifyListenerLoaded();
     }
 
     private void notifyVideoPaused() {

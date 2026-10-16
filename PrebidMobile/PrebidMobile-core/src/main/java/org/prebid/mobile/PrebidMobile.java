@@ -41,6 +41,7 @@ import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Main class for managing Prebid SDK. It allows to initialize, set log level
@@ -118,6 +119,17 @@ public class PrebidMobile {
      */
     private static boolean useCacheForReportingWithRenderingApi = false;
 
+    /**
+     * Indicates whether the SDK filters out bids that don't have a successful server-side Prebid Cache
+     * entry (bid.ext.prebid.cache) before passing their targeting to the ad server.
+     * Applies to the Original API only: the Rendering API renders the creative from the bid markup
+     * and never fetches it from Prebid Cache.
+     * <p>
+     * This setting only filters the response. It never requests caching: the Original API already
+     * asks Prebid Server to cache bids.
+     */
+    private static boolean filterOutUncachedBids = false;
+
     private static int timeoutMillis = 2_000;
     private static boolean isTimeoutModified = false;
 
@@ -147,6 +159,8 @@ public class PrebidMobile {
     private static WeakReference<PrebidEventDelegate> eventDelegateReference = new WeakReference<>(null);
     private static boolean disableStatusCheck = false;
     private static boolean useCustomTabsForClickThrough = false;
+    @NonNull
+    private static EidsPlacement eidsPlacement = EidsPlacement.COMPATIBLE;
 
     private PrebidMobile() {
     }
@@ -166,6 +180,27 @@ public class PrebidMobile {
      */
     public static void setUseCacheForReportingWithRenderingApi(boolean useCacheForReportingWithRenderingApi) {
         PrebidMobile.useCacheForReportingWithRenderingApi = useCacheForReportingWithRenderingApi;
+    }
+
+    /**
+     * {@link #filterOutUncachedBids}
+     */
+    public static boolean isFilterOutUncachedBids() {
+        return filterOutUncachedBids;
+    }
+
+    /**
+     * Enables filtering of bids without a successful server-side Prebid Cache entry. Original API only.
+     * <p>
+     * Filtered bids never reach the ad server targeting. If the bid Prebid Server designated as the
+     * winner is filtered, the highest-priced cached bid is promoted and
+     * {@link org.prebid.mobile.api.data.BidInfo#isTopBidFiltered()} is {@code true}. If every bid is
+     * filtered, the fetch demand result is {@link ResultCode#NO_CACHED_BIDS}.
+     * <p>
+     * Default is {@code false}.
+     */
+    public static void setFilterOutUncachedBids(boolean filterOutUncachedBids) {
+        PrebidMobile.filterOutUncachedBids = filterOutUncachedBids;
     }
 
     /**
@@ -613,6 +648,26 @@ public class PrebidMobile {
      */
     public static boolean shouldUseCustomTabsForClickThrough() {
         return useCustomTabsForClickThrough;
+    }
+
+    /**
+     * Controls where Extended Identifiers (EIDs) are placed in the bid request.
+     * Default is {@link EidsPlacement#COMPATIBLE} (both {@code user.eids} and {@code user.ext.eids}).
+     * <p>
+     * Allows publishers to choose EID placement during migration from OpenRTB 2.5 to 2.6.
+     *
+     * @see EidsPlacement
+     */
+    public static void setEidsPlacement(@NonNull EidsPlacement placement) {
+        PrebidMobile.eidsPlacement = Objects.requireNonNull(placement);
+    }
+
+    /**
+     * @see #setEidsPlacement(EidsPlacement)
+     */
+    @NonNull
+    public static EidsPlacement getEidsPlacement() {
+        return eidsPlacement;
     }
 
     /**
