@@ -46,7 +46,7 @@ import org.robolectric.annotation.Config;
 import java.util.HashMap;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 24)
+@Config(sdk = 23)
 public class GamUtilsTest {
 
     public static final String KEY_IS_PREBID = "isPrebid";

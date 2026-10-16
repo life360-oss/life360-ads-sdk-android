@@ -128,15 +128,12 @@ public class BannerView extends FrameLayout {
         @Override
         public void onAdLoaded() {
             isBidAdLoaded = true;
-            if (bannerViewListener == null) {
-                return;
-            }
             // Only route to the Life360 render path when the publisher opted in
             if (bannerViewListener instanceof Life360BannerViewListener && life360DidRenderBid(winningBid)) {
                 ((Life360BannerViewListener) bannerViewListener).onLife360AdLoaded(BannerView.this);
-                return;
+            } else if (bannerViewListener != null) {
+                bannerViewListener.onAdLoaded(BannerView.this);
             }
-            bannerViewListener.onAdLoaded(BannerView.this);
             // The bid may have expired while the creative was loading.
             expireAdIfNeeded();
         }
@@ -217,11 +214,11 @@ public class BannerView extends FrameLayout {
         public void onFetchCompleted(BidResponse response) {
             prebidException = null;
             bidResponse = response;
+            winningBid = nativoServer.decideWinner(response);
 
             // bid.exp counts from the auction, so the countdown starts as soon as the bid arrives.
-            scheduleExpirationIfNeeded();
+            scheduleExpirationIfNeeded(winningBid);
 
-            winningBid = nativoServer.decideWinner(response);
             isPrimaryAdServerRequestInProgress = winningBid != null;
             eventHandler.requestAdWithBid(winningBid);
         }
@@ -233,6 +230,7 @@ public class BannerView extends FrameLayout {
 
             bidResponse = null;
             winningBid = nativoServer.getLife360BidResponse();
+            scheduleExpirationIfNeeded(winningBid);
             isPrimaryAdServerRequestInProgress = winningBid != null;
             eventHandler.requestAdWithBid(winningBid);
         }
@@ -378,6 +376,7 @@ public class BannerView extends FrameLayout {
 
             if (shouldRenderImmediately && bidResponse != null) {
                 isPrimaryAdServerRequestInProgress = false;
+                scheduleExpirationIfNeeded(bidResponse);
                 // Start Life360 rendering
                 bannerEventListener.onSdkWin(bidResponse);
             } else if (adUnitConfig.isPrebidServerEnabled()) {
@@ -386,6 +385,7 @@ public class BannerView extends FrameLayout {
             } else {
                 prebidException = error;
                 winningBid = nativoServer.getLife360BidResponse();
+                scheduleExpirationIfNeeded(winningBid);
                 isPrimaryAdServerRequestInProgress = winningBid != null;
                 eventHandler.requestAdWithBid(winningBid);
                 bidLoader.setupRefreshTimer();
@@ -763,11 +763,16 @@ public class BannerView extends FrameLayout {
         bidResponse = response;
     }
 
-    private void scheduleExpirationIfNeeded() {
+    /**
+     * Keyed off the auction winner rather than the Prebid response, since a Life360 bid can win and
+     * the rendered ad must expire by its own exp. Every path that picks a new winner calls this so a
+     * previous bid's timer never carries over to the next ad.
+     */
+    private void scheduleExpirationIfNeeded(@Nullable BidResponse winner) {
         // The new bid replaces the previous ad, so a bid without exp must not inherit its timer.
         resetExpiration();
 
-        Integer expirationTimeSeconds = bidResponse != null ? bidResponse.getExpirationTimeSeconds() : null;
+        Integer expirationTimeSeconds = winner != null ? winner.getExpirationTimeSeconds() : null;
         // BidResponse normalizes absent, zero, and negative exp values to null.
         if (expirationTimeSeconds == null) {
             return;

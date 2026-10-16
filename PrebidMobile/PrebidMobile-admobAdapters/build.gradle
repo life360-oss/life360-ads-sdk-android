@@ -3,7 +3,7 @@ apply from: '../android.gradle'
 android {
     namespace "com.life360.ads.admob.adapters"
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 23
     }
     testOptions {
         unitTests.all {
