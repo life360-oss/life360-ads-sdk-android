@@ -48,11 +48,7 @@ public class NativeAdUnit extends AdUnit {
                 HashMap<String, String> keywords = response.getTargeting();
                 Util.apply(keywords, adObject);
 
-                Integer expirationTimeSeconds = response.getExpirationTimeSeconds();
-                String cacheId = CacheManager.save(
-                        response.getWinningBidJson(),
-                        expirationTimeSeconds != null ? expirationTimeSeconds.longValue() : null
-                );
+                String cacheId = CacheManager.save(response.getWinningBidJson());
                 Util.saveCacheId(cacheId, adObject);
 
                 notifyWinEvent(response);

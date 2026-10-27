@@ -319,8 +319,6 @@ public abstract class AdUnit {
                 return ResultCode.TIMEOUT;
             case NO_BIDS:
                 return ResultCode.NO_BIDS;
-            case NO_CACHED_BIDS:
-                return ResultCode.NO_CACHED_BIDS;
             default:
                 return ResultCode.PREBID_SERVER_ERROR;
         }

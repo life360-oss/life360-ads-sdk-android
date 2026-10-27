@@ -98,8 +98,7 @@ public class InterstitialController implements PrebidMobileInterstitialControlle
             if (listener != null) {
                 listener.onInterstitialClosed();
 
-                // The close callback may destroy the controller. A destroyed ad unit gets no reward.
-                if (listener == null || config == null) return;
+                if (config == null) return;
                 boolean userIsNotRewarded = !config.getRewardManager().getUserRewardedAlready();
                 if (userIsNotRewarded) {
                     listener.onUserEarnedReward();

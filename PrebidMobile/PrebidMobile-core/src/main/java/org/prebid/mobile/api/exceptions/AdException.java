@@ -28,7 +28,6 @@ public class AdException extends Exception {
     public static final String INIT_ERROR = "Initialization failed";
     public static final String FAILED_TO_LOAD_BIDS = "Failed to load bids";
     public static final String FAILED_TO_PARSE_RESPONSE = "Failed to parse response";
-    public static final String NO_BIDS = "No bids";
     public static final String SERVER_ERROR = "Server error";
     public static final String THIRD_PARTY = "Third Party SDK";
     public static final String INTERNAL_ERROR = "SDK internal error";

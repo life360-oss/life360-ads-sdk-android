@@ -22,7 +22,6 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import org.prebid.mobile.LogUtil;
 import org.prebid.mobile.api.exceptions.AdException;
@@ -49,7 +48,6 @@ public class GamInterstitialEventHandler implements InterstitialEventHandler, Ga
 
     private InterstitialEventListener interstitialEventListener;
     private Handler appEventHandler;
-    private AdManagerRequestConfiguration adManagerRequestConfiguration;
 
     private boolean isExpectingAppEvent;
     private boolean didNotifiedBidWin;
@@ -60,17 +58,6 @@ public class GamInterstitialEventHandler implements InterstitialEventHandler, Ga
     ) {
         activityWeakReference = new WeakReference<>(activity);
         this.gamAdUnitId = gamAdUnitId;
-    }
-
-    public void setAdManagerRequestConfiguration(
-            @Nullable AdManagerRequestConfiguration adManagerRequestConfiguration
-    ) {
-        this.adManagerRequestConfiguration = adManagerRequestConfiguration;
-    }
-
-    @Nullable
-    public AdManagerRequestConfiguration getAdManagerRequestConfiguration() {
-        return adManagerRequestConfiguration;
     }
 
     //region ==================== GAM AppEventsListener Implementation
@@ -133,7 +120,7 @@ public class GamInterstitialEventHandler implements InterstitialEventHandler, Ga
             return;
         }
 
-        requestInterstitial.loadAd(bid, adManagerRequestConfiguration);
+        requestInterstitial.loadAd(bid);
     }
 
     @Override

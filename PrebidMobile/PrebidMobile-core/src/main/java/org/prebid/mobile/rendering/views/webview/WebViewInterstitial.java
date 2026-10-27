@@ -25,7 +25,6 @@ import org.prebid.mobile.rendering.views.webview.PreloadManager.PreloadedListene
 import org.prebid.mobile.rendering.views.webview.mraid.BaseJSInterface;
 import org.prebid.mobile.rendering.views.webview.mraid.InterstitialJSInterface;
 import org.prebid.mobile.rendering.views.webview.mraid.JsExecutor;
-import org.prebid.mobile.rendering.views.webview.mraid.MainThreadJSInterface;
 
 public class WebViewInterstitial extends WebViewBase {
 
@@ -50,7 +49,7 @@ public class WebViewInterstitial extends WebViewBase {
                                                                                                new Handler(Looper.getMainLooper()),
                                                                                                new HandlerQueueManager()));
 
-        addJavascriptInterface(new MainThreadJSInterface(mraid), "jsBridge");
+        addJavascriptInterface(mraid, "jsBridge");
         LogUtil.debug(TAG, "JS bridge initialized");
         setBaseJSInterface(mraid);
     }

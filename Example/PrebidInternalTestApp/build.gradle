@@ -23,7 +23,7 @@ android {
     setCompileSdkVersion(34)
     setBuildToolsVersion("35.0.1")
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 23
         targetSdkVersion 34
         versionCode 1
         versionName "1.0.0"
@@ -130,7 +130,8 @@ dependencies {
     androidTestImplementation libs.androidx.uiautomator
 
     // Video player
-    implementation libs.media3.exoplayer
-    implementation libs.media3.ui
-    implementation libs.media3.exoplayer.ima
+    implementation libs.exoplayer
+    implementation libs.exoplayer.core
+    implementation libs.exoplayer.ui
+    implementation libs.extension.ima
 }

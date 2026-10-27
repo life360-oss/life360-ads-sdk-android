@@ -83,8 +83,8 @@ public class AdWebView extends WebView {
 
         if (getContext() != null) {
             WindowManager windowManager = (WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE);
-            screenWidth = Utils.getWindowWidth(windowManager);
-            screenHeight = Utils.getWindowHeight(windowManager);
+            screenWidth = Utils.getScreenWidth(windowManager);
+            screenHeight = Utils.getScreenHeight(windowManager);
         }
 
         if (this instanceof WebViewInterstitial) {

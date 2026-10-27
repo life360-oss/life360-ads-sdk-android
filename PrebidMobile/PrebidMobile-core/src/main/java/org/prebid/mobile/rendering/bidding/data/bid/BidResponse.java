@@ -70,12 +70,6 @@ public class BidResponse {
     private AdUnitConfiguration adUnitConfiguration;
     @Nullable
     private JSONObject responseJson;
-    private boolean filtersUncachedBids;
-    private int bidsWithoutSuccessfulCacheCount;
-    private boolean removedDesignatedWinningBid;
-    private boolean topBidFiltered;
-    @Nullable
-    private Bid promotedWinningBid;
 
     private long creationTime;
 
@@ -161,18 +155,11 @@ public class BidResponse {
                 }
             }
 
-            filtersUncachedBids = PrebidMobile.isFilterOutUncachedBids() && adUnitConfiguration.isOriginalAdUnit();
             JSONArray jsonSeatbids = responseJson.optJSONArray("seatbid");
             if (jsonSeatbids != null) {
-                Seatbid.BidFilter bidFilter = filtersUncachedBids ? this::keepBidWithSuccessfulCache : null;
                 for (int i = 0; i < jsonSeatbids.length(); i++) {
-                    Seatbid seatbid = Seatbid.fromJSONObject(jsonSeatbids.optJSONObject(i), bidFilter);
-                    if (!filtersUncachedBids || !seatbid.getBids().isEmpty()) {
-                        seatbids.add(seatbid);
-                    }
-                }
-                if (removedDesignatedWinningBid && getWinningBid() == null) {
-                    promoteHighestPricedBid();
+                    Seatbid seatbid = Seatbid.fromJSONObject(jsonSeatbids.optJSONObject(i));
+                    seatbids.add(seatbid);
                 }
             }
 
@@ -198,11 +185,6 @@ public class BidResponse {
 
     @Nullable
     public Bid getWinningBid() {
-        if (promotedWinningBid != null) {
-            winningBidJson = promotedWinningBid.getJsonString();
-            return promotedWinningBid;
-        }
-
         if (seatbids == null) {
             return null;
         }
@@ -253,30 +235,6 @@ public class BidResponse {
         return Utils.isVast(bid.getAdm());
     }
 
-    /**
-     * Whether bids without a successful Prebid Cache entry were filtered out of this response:
-     * {@link PrebidMobile#isFilterOutUncachedBids()} is enabled and the ad unit uses the Original API.
-     */
-    public boolean isFilteringUncachedBids() {
-        return filtersUncachedBids;
-    }
-
-    /**
-     * Number of bids dropped because they had no successful Prebid Cache entry.
-     * Always 0 unless {@link #isFilteringUncachedBids()} is {@code true}.
-     */
-    public int getBidsWithoutSuccessfulCacheCount() {
-        return bidsWithoutSuccessfulCacheCount;
-    }
-
-    /**
-     * {@code true} when the bid Prebid Server designated as the winner was dropped for lacking a
-     * successful Prebid Cache entry and the highest-priced cached bid was promoted in its place.
-     */
-    public boolean isTopBidFiltered() {
-        return topBidFiltered;
-    }
-
     public String getPreferredPluginRendererName() {
         String renderer = null;
         Bid bid = getWinningBid();
@@ -303,61 +261,20 @@ public class BidResponse {
     }
 
     private boolean hasWinningKeywords(Prebid prebid) {
-        if (!hasDesignatedWinningKeywords(prebid)) {
+        if (prebid == null || prebid.getTargeting().isEmpty()) {
             return false;
         }
+        HashMap<String, String> targeting = prebid.getTargeting();
+        boolean result = targeting.containsKey("hb_pb") && targeting.containsKey("hb_bidder");
         // Matches iOS's Bid.isWinning: read the flag live rather than permanently requiring
         // hb_cache_id for every "original API" ad unit regardless of the flag's value. An
         // AdUnit's init used to force this on for every original ad unit with no way back out,
         // so a bid PBS didn't get to cache (e.g. no external Prebid Cache reachable) could never
         // be considered winning even though its content was otherwise perfectly good.
-        return !PrebidMobile.isUseCacheForReportingWithRenderingApi() || prebid.getTargeting().containsKey("hb_cache_id");
-    }
-
-    /**
-     * Prebid Server marks its auction winner with the unsuffixed hb_pb and hb_bidder keys.
-     * hb_cache_id is deliberately not required here, so a winner whose caching failed is still
-     * recognized as the designated winner.
-     */
-    private static boolean hasDesignatedWinningKeywords(@Nullable Prebid prebid) {
-        if (prebid == null || prebid.getTargeting().isEmpty()) {
-            return false;
+        if (PrebidMobile.isUseCacheForReportingWithRenderingApi()) {
+            result = result && targeting.containsKey("hb_cache_id");
         }
-        HashMap<String, String> targeting = prebid.getTargeting();
-        return targeting.containsKey("hb_pb") && targeting.containsKey("hb_bidder");
-    }
-
-    private boolean keepBidWithSuccessfulCache(@NonNull Bid bid) {
-        if (bid.hasSuccessfulServerCache()) {
-            return true;
-        }
-
-        bidsWithoutSuccessfulCacheCount++;
-        if (hasDesignatedWinningKeywords(bid.getPrebid())) {
-            removedDesignatedWinningBid = true;
-        }
-        return false;
-    }
-
-    /**
-     * The designated winner does not hand its winning status to another bid when it is dropped.
-     * Without this, the remaining cached demand would be discarded just because the top bid
-     * failed to cache.
-     */
-    private void promoteHighestPricedBid() {
-        Bid highestPricedBid = null;
-        for (Seatbid seatbid : seatbids) {
-            for (Bid bid : seatbid.getBids()) {
-                if (highestPricedBid == null || bid.getPrice() > highestPricedBid.getPrice()) {
-                    highestPricedBid = bid;
-                }
-            }
-        }
-
-        if (highestPricedBid != null) {
-            promotedWinningBid = highestPricedBid;
-            topBidFiltered = true;
-        }
+        return result;
     }
 
     @NonNull
@@ -397,7 +314,6 @@ public class BidResponse {
         if (winningBid == null) return null;
 
         int expirationTime = winningBid.getExp();
-        // OpenRTB bid.exp is only meaningful when positive; absent, zero, and negative values mean no expiration timer.
         if (expirationTime <= 0) {
             return null;
         }

@@ -23,7 +23,6 @@ import android.os.Looper;
 import android.view.View;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import androidx.annotation.Nullable;
 
@@ -61,7 +60,6 @@ public class GamBannerEventHandler implements BannerEventHandler, GamAdEventList
 
     private BannerEventListener bannerEventListener;
     private Handler appEventHandler;
-    private AdManagerRequestConfiguration adManagerRequestConfiguration;
 
     private boolean isExpectingAppEvent;
 
@@ -83,17 +81,6 @@ public class GamBannerEventHandler implements BannerEventHandler, GamAdEventList
         applicationContext = context.getApplicationContext();
         this.gamAdUnitId = gamAdUnitId;
         this.adSizes = adSizes;
-    }
-
-    public void setAdManagerRequestConfiguration(
-            @Nullable AdManagerRequestConfiguration adManagerRequestConfiguration
-    ) {
-        this.adManagerRequestConfiguration = adManagerRequestConfiguration;
-    }
-
-    @Nullable
-    public AdManagerRequestConfiguration getAdManagerRequestConfiguration() {
-        return adManagerRequestConfiguration;
     }
 
     public static AdSize[] convertGamAdSize(com.google.android.gms.ads.AdSize... sizes) {
@@ -179,7 +166,7 @@ public class GamBannerEventHandler implements BannerEventHandler, GamAdEventList
         }
 
         requestBanner.setManualImpressionsEnabled(true);
-        requestBanner.loadAd(bid, adManagerRequestConfiguration);
+        requestBanner.loadAd(bid);
     }
 
     @Override

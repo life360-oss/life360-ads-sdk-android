@@ -42,7 +42,6 @@ import org.prebid.mobile.configuration.AdUnitConfiguration;
 import org.prebid.mobile.rendering.bidding.data.bid.Prebid;
 import org.prebid.mobile.rendering.models.PlacementType;
 import org.prebid.mobile.rendering.models.openrtb.BidRequest;
-import org.prebid.mobile.rendering.models.openrtb.bidRequests.Ext;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.Imp;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.User;
 import org.prebid.mobile.rendering.models.openrtb.bidRequests.devices.Geo;
@@ -188,12 +187,7 @@ public class BasicParameterBuilder extends ParameterBuilder {
         final User user = bidRequest.getUser();
 
         user.keywords = TargetingParams.getUserKeywords();
-        // A copy, so request-only keys such as "eids" never end up in the publisher's shared Ext.
-        final Ext publisherUserExt = TargetingParams.getUserExt();
-        user.ext = new Ext();
-        if (publisherUserExt != null) {
-            user.ext.put(publisherUserExt.getJsonObject());
-        }
+        user.ext = TargetingParams.getUserExt();
 
         List<ExternalUserId> extendedIds = TargetingParams.getExternalUserIds();
         if (TargetingParams.getSendSharedId()) {

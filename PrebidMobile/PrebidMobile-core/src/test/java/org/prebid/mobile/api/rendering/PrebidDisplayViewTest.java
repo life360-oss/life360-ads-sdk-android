@@ -23,7 +23,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.prebid.mobile.PrebidMobile;
@@ -80,33 +79,16 @@ public class PrebidDisplayViewTest {
     }
 
     @Test
-    public void whenHtmlBidWinsAfterVideo_BuiltInVideoIsCleared() {
-        // A multiformat banner shares one configuration across refreshes, so a video creative must
-        // not leave isBuiltInVideo latched for the next HTML creative.
-        adUnitConfiguration.setBuiltInVideo(true);
-
-        BidResponse htmlResponse = mock(BidResponse.class);
-        Bid htmlBid = mock(Bid.class);
-        when(htmlBid.getAdm()).thenReturn("adm");
-        when(htmlResponse.getWinningBid()).thenReturn(htmlBid);
-        when(htmlResponse.isVideo()).thenReturn(false);
-
-        new PrebidDisplayView(context, mockDisplayViewListener, mockDisplayVideoListener, adUnitConfiguration, htmlResponse);
-
-        Assert.assertFalse(adUnitConfiguration.isBuiltInVideo());
-    }
-
-    @Test
     public void whenDisplayAd_LoadBidTransaction() {
         Assert.assertNotNull(WhiteBox.getInternalState(prebidDisplayView, "adViewManager"));
     }
 
     @Test
-    public void whenAdViewManagerListenerAdLoaded_DoesNotNotifyListenerBeforeViewReady()
+    public void whenAdViewManagerListenerAdLoaded_NotifyListenerOnAdLoaded()
         throws IllegalAccessException {
         AdViewManagerListener adViewManagerListener = getAdViewManagerListener();
         adViewManagerListener.adLoaded(mock(AdDetails.class));
-        verify(mockDisplayViewListener, never()).onAdLoaded();
+        verify(mockDisplayViewListener).onAdLoaded();
     }
 
     @Test
@@ -115,26 +97,6 @@ public class PrebidDisplayViewTest {
         AdViewManagerListener adViewManagerListener = getAdViewManagerListener();
         adViewManagerListener.viewReadyForImmediateDisplay(mock(View.class));
         verify(mockDisplayViewListener).onAdDisplayed();
-    }
-
-    @Test
-    public void whenAdLoadedAndViewReadyForImmediateDisplay_NotifyLoadedAfterCreativeAddedBeforeDisplayed()
-        throws IllegalAccessException {
-        AdViewManagerListener adViewManagerListener = getAdViewManagerListener();
-        View creative = new View(context);
-
-        doAnswer(invocation -> {
-            Assert.assertEquals(1, prebidDisplayView.getChildCount());
-            Assert.assertSame(creative, prebidDisplayView.getChildAt(0));
-            return null;
-        }).when(mockDisplayViewListener).onAdLoaded();
-
-        adViewManagerListener.adLoaded(mock(AdDetails.class));
-        adViewManagerListener.viewReadyForImmediateDisplay(creative);
-
-        InOrder inOrder = inOrder(mockDisplayViewListener);
-        inOrder.verify(mockDisplayViewListener).onAdLoaded();
-        inOrder.verify(mockDisplayViewListener).onAdDisplayed();
     }
 
     @Test

@@ -116,8 +116,6 @@ public class MediationNativeAdUnit {
                 return FetchDemandResult.INVALID_AD_OBJECT;
             case NO_BIDS:
                 return FetchDemandResult.NO_BIDS;
-            case NO_CACHED_BIDS:
-                return FetchDemandResult.NO_CACHED_BIDS;
             case PREBID_SERVER_ERROR:
                 return FetchDemandResult.SERVER_ERROR;
             case TIMEOUT:

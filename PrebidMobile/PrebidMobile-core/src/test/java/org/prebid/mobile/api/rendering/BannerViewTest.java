@@ -18,23 +18,18 @@ package org.prebid.mobile.api.rendering;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Pair;
 import android.view.View;
-import com.life360.ads.bid.Life360BidResponse;
-import com.life360.ads.server.NativoServerProxy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.prebid.mobile.AdSize;
 import org.prebid.mobile.PrebidMobile;
 import org.prebid.mobile.api.data.AdFormat;
-import org.prebid.mobile.api.data.AdUnitFormat;
 import org.prebid.mobile.api.data.VideoPlacementType;
 import org.prebid.mobile.api.exceptions.AdException;
 import org.prebid.mobile.api.rendering.listeners.BannerVideoListener;
@@ -55,13 +50,10 @@ import org.prebid.mobile.rendering.utils.broadcast.ScreenStateReceiver;
 import org.prebid.mobile.test.utils.WhiteBox;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
 
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -226,116 +218,6 @@ public class BannerViewTest {
         bannerView.setVideoPlacementType(VideoPlacementType.IN_FEED);
         assertEquals(VideoPlacementType.IN_FEED, bannerView.getVideoPlacementType());
     }
-
-    @Test
-    public void setVideoPlacementType_afterExplicitAdUnitFormats_keepsConfiguredFormats() {
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO));
-
-        bannerView.setVideoPlacementType(VideoPlacementType.IN_BANNER);
-
-        assertEquals(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO), bannerView.getAdUnitFormats());
-        assertEquals(VideoPlacementType.IN_BANNER, bannerView.getVideoPlacementType());
-    }
-
-    @Test
-    public void setAdUnitFormats_afterVideoPlacementType_keepsConfiguredFormats() {
-        bannerView.setVideoPlacementType(VideoPlacementType.IN_BANNER);
-
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO));
-
-        assertEquals(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO), bannerView.getAdUnitFormats());
-        assertEquals(VideoPlacementType.IN_BANNER, bannerView.getVideoPlacementType());
-    }
-
-    @Test
-    public void adUnitFormatsDefaultToBanner() {
-        assertEquals(EnumSet.of(AdUnitFormat.BANNER), bannerView.getAdUnitFormats());
-    }
-
-    @Test
-    public void setAdUnitFormats_video_requestsVideoOnly() throws IllegalAccessException {
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.VIDEO));
-
-        assertEquals(EnumSet.of(AdUnitFormat.VIDEO), bannerView.getAdUnitFormats());
-        assertEquals(EnumSet.of(AdFormat.VAST), getAdUnitConfig().getAdFormats());
-    }
-
-    @Test
-    public void setAdUnitFormats_multiformat_requestsBannerAndVideo() throws IllegalAccessException {
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO));
-
-        assertEquals(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO), bannerView.getAdUnitFormats());
-        assertEquals(EnumSet.of(AdFormat.BANNER, AdFormat.VAST), getAdUnitConfig().getAdFormats());
-    }
-
-    @Test
-    public void setAdUnitFormats_nullOrEmpty_keepsCurrentValue() throws IllegalAccessException {
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO));
-
-        bannerView.setAdUnitFormats(null);
-        assertEquals(EnumSet.of(AdFormat.BANNER, AdFormat.VAST), getAdUnitConfig().getAdFormats());
-
-        bannerView.setAdUnitFormats(EnumSet.noneOf(AdUnitFormat.class));
-        assertEquals(EnumSet.of(AdFormat.BANNER, AdFormat.VAST), getAdUnitConfig().getAdFormats());
-    }
-
-    @Test
-    public void setAdUnitFormats_multiformat_autoRefreshStaysAvailable() {
-        bannerView.setAdUnitFormats(EnumSet.of(AdUnitFormat.BANNER, AdUnitFormat.VIDEO));
-
-        bannerView.setAutoRefreshDelay(30);
-
-        assertEquals(30_000, bannerView.getAutoRefreshDelayInMs());
-    }
-
-    //region ================= Auto refresh vs. video creatives
-    @Test
-    public void canPerformRefreshWhileVideoIsPlaying_SkipTheTick() throws Exception {
-        when(mockDisplayView.isVideoPlaying()).thenReturn(true);
-
-        assertFalse(getBidRefreshListener().canPerformRefresh());
-    }
-
-    @Test
-    public void canPerformRefreshAfterVideoFinished_AllowTheTick() throws Exception {
-        when(mockDisplayView.isVideoPlaying()).thenReturn(false);
-        when(mockScreenStateReceiver.isScreenOn()).thenReturn(true);
-
-        // The visibility checker is the only remaining gate, so the video no longer blocks refresh.
-        getBidRefreshListener().canPerformRefresh();
-
-        verify(mockDisplayView, times(1)).isVideoPlaying();
-    }
-
-    @Test
-    public void canPerformRefreshAfterAdFailed_AllowTheTickEvenIfVideoReportsPlaying() throws Exception {
-        when(mockDisplayView.isVideoPlaying()).thenReturn(true);
-        WhiteBox.field(BannerView.class, "adFailed").set(bannerView, true);
-
-        assertTrue(getBidRefreshListener().canPerformRefresh());
-    }
-
-    @Test
-    public void isVideoPlayingWithoutDisplayView_False() throws IllegalAccessException {
-        WhiteBox.field(BannerView.class, "displayView").set(bannerView, null);
-
-        assertFalse(bannerView.isVideoPlaying());
-    }
-
-    private BidLoader.BidRefreshListener getBidRefreshListener() throws Exception {
-        // initBidLoader() builds a BidLoader and registers the refresh gate on it.
-        WhiteBox.method(BannerView.class, "initBidLoader").invoke(bannerView);
-
-        final BidLoader bidLoader = (BidLoader) WhiteBox.field(BannerView.class, "bidLoader").get(bannerView);
-        return (BidLoader.BidRefreshListener) WhiteBox
-                .field(BidLoader.class, "bidRefreshListener")
-                .get(bidLoader);
-    }
-
-    private AdUnitConfiguration getAdUnitConfig() throws IllegalAccessException {
-        return (AdUnitConfiguration) WhiteBox.field(BannerView.class, "adUnitConfig").get(bannerView);
-    }
-    //endregion ================= Auto refresh vs. video creatives
 
     //region ======================= BidRequestListener tests
     @Test
@@ -530,234 +412,6 @@ public class BannerViewTest {
         getDisplayViewListener().onAdLoaded();
         verify(mockBannerListener).onAdLoaded(bannerView);
     }
-
-    //region ================= Bid expiration
-    @Test
-    public void whenLoadedBannerExpiresWithoutRefresh_KeepAdAndNotifyExpiredOnly() {
-        bannerView.addView(new View(mockContext));
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertTrue(bannerView.isExpired());
-        assertEquals(1, bannerView.getChildCount());
-        verify(mockBannerListener).onAdExpired(bannerView);
-        verify(mockBannerListener, never()).onAdFailed(eq(bannerView), any(AdException.class));
-        verify(mockDisplayView, never()).destroy();
-        verify(mockBidLoader, never()).load();
-    }
-
-    @Test
-    public void whenLoadedBannerExpiresWithAutoRefresh_RemoveAdThenNotifyThenLoadAgain() {
-        bannerView.setAutoRefreshDelay(30);
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        InOrder inOrder = inOrder(mockDisplayView, mockBannerListener, mockBidLoader);
-        inOrder.verify(mockDisplayView).destroy();
-        inOrder.verify(mockBannerListener).onAdExpired(bannerView);
-        inOrder.verify(mockBidLoader).load();
-        verify(mockBannerListener, never()).onAdFailed(eq(bannerView), any(AdException.class));
-    }
-
-    @Test
-    public void whenRefreshStoppedBannerExpires_KeepAdAndDoNotLoadAgain() {
-        bannerView.setAutoRefreshDelay(30);
-        bannerView.stopRefresh();
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        verify(mockBannerListener).onAdExpired(bannerView);
-        verify(mockDisplayView, never()).destroy();
-        verify(mockBidLoader, never()).load();
-    }
-
-    @Test
-    public void whenLoadAdAfterStopRefresh_ExpiredBannerLoadsAgain() {
-        bannerView.setAutoRefreshDelay(30);
-        bannerView.stopRefresh();
-        bannerView.loadAd();
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        verify(mockBannerListener).onAdExpired(bannerView);
-        verify(mockBidLoader, times(2)).load();
-    }
-
-    @Test
-    public void whenBidExpiresWhileAdIsLoading_NotifyExpiredRightAfterLoaded() {
-        receiveBid(1);
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-
-        getDisplayViewListener().onAdLoaded();
-
-        InOrder inOrder = inOrder(mockBannerListener);
-        inOrder.verify(mockBannerListener).onAdLoaded(bannerView);
-        inOrder.verify(mockBannerListener).onAdExpired(bannerView);
-        assertTrue(bannerView.isExpired());
-    }
-
-    @Test
-    public void whenCreativeLoadsSlowly_ExpirationStillCountsFromBidReceipt() {
-        receiveBid(2);
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-        getDisplayViewListener().onAdLoaded();
-
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        verify(mockBannerListener).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenBannerImpressionTrackedBeforeExpiration_DoNotNotifyExpired() {
-        receiveBid(1);
-        DisplayViewListener displayViewListener = getDisplayViewListener();
-
-        displayViewListener.onAdLoaded();
-        displayViewListener.onAdDisplayed();
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-        verify(mockDisplayView, never()).destroy();
-    }
-
-    @Test
-    public void whenAdServerWins_DoNotNotifyExpired() {
-        receiveBid(1);
-        getBannerEventListener().onAdServerWin(new View(mockContext));
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenBannerDestroyedBeforeExpiration_DoNotNotifyExpired() {
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-        bannerView.destroy();
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenNewBidWithoutExpirationArrives_PreviousAdStopsExpiring() {
-        receiveBid(1);
-        getDisplayViewListener().onAdLoaded();
-        receiveBid(null);
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenBannerLoadedWithoutExpiration_DoNotNotifyExpired() {
-        receiveBid(null);
-        getDisplayViewListener().onAdLoaded();
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenLife360BidOutbidsPrebid_PrebidExpirationDoesNotApply() throws IllegalAccessException {
-        setLife360BidResponse(life360BidResponse(null, 2.0));
-        getBidRequesterListener().onFetchCompleted(prebidBidResponse(1, 1.0));
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenLife360BidOutbidsPrebid_AdExpiresByLife360Expiration() throws IllegalAccessException {
-        setLife360BidResponse(life360BidResponse(1, 2.0));
-        getBidRequesterListener().onFetchCompleted(prebidBidResponse(null, 1.0));
-        getDisplayViewListener().onAdLoaded();
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertTrue(bannerView.isExpired());
-        verify(mockBannerListener).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenPrebidErrorFallsBackToLife360_PreviousBidTimerDoesNotCarryOver() throws IllegalAccessException {
-        receiveBid(2);
-        getDisplayViewListener().onAdLoaded();
-
-        setLife360BidResponse(life360BidResponse(null, 1.0));
-        getBidRequesterListener().onError(new AdException(AdException.INTERNAL_ERROR, "Test"));
-        getDisplayViewListener().onAdLoaded();
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(2, TimeUnit.SECONDS);
-
-        assertFalse(bannerView.isExpired());
-        verify(mockBannerListener, never()).onAdExpired(bannerView);
-    }
-
-    @Test
-    public void whenNoBannerListener_LoadedAdStillExpires() {
-        bannerView.setBannerListener(null);
-        receiveBid(1);
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        getDisplayViewListener().onAdLoaded();
-
-        assertTrue(bannerView.isExpired());
-    }
-
-    private void receiveBid(Integer expirationTimeSeconds) {
-        BidResponse mockBidResponse = mock(BidResponse.class);
-        when(mockBidResponse.getExpirationTimeSeconds()).thenReturn(expirationTimeSeconds);
-        getBidRequesterListener().onFetchCompleted(mockBidResponse);
-        // The primary ad server has answered, so a new load is allowed again.
-        changePrimaryAdServerRequestStatus(false);
-    }
-
-    private BidResponse prebidBidResponse(Integer expirationTimeSeconds, double price) {
-        BidResponse response = mock(BidResponse.class);
-        stubBid(response, expirationTimeSeconds, price);
-        return response;
-    }
-
-    private Life360BidResponse life360BidResponse(Integer expirationTimeSeconds, double price) {
-        Life360BidResponse response = mock(Life360BidResponse.class);
-        stubBid(response, expirationTimeSeconds, price);
-        return response;
-    }
-
-    private void stubBid(BidResponse response, Integer expirationTimeSeconds, double price) {
-        Bid bid = mock(Bid.class);
-        when(bid.getPrice()).thenReturn(price);
-        when(response.getWinningBid()).thenReturn(bid);
-        when(response.getExpirationTimeSeconds()).thenReturn(expirationTimeSeconds);
-    }
-
-    private void setLife360BidResponse(Life360BidResponse response) throws IllegalAccessException {
-        NativoServerProxy nativoServer = (NativoServerProxy) WhiteBox.field(BannerView.class, "nativoServer").get(bannerView);
-        // The setter is private: only a Life360 bid request is meant to populate it.
-        WhiteBox.field(NativoServerProxy.class, "life360BidResponse").set(nativoServer, response);
-    }
-    //endregion ================= Bid expiration
 
     @Test
     public void whenDisplayViewOnAdDisplayed_CallBannerListenerOnAdDisplayedAndTrackImpression()

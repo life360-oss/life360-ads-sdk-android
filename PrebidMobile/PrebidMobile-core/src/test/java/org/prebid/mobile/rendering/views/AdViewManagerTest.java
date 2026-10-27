@@ -37,7 +37,6 @@ import org.prebid.mobile.rendering.loading.Transaction;
 import org.prebid.mobile.rendering.loading.TransactionManager;
 import org.prebid.mobile.rendering.models.AbstractCreative;
 import org.prebid.mobile.rendering.models.AdDetails;
-import org.prebid.mobile.rendering.models.HTMLCreative;
 import org.prebid.mobile.rendering.models.internal.InternalPlayerState;
 import org.prebid.mobile.rendering.networking.tracking.TrackingManager;
 import org.prebid.mobile.rendering.video.*;
@@ -218,7 +217,8 @@ public class AdViewManagerTest {
     }
 
     @Test
-    public void creativeDidCompleteWithoutEndCard_DoesNotCloseInterstitial() throws Exception {
+    public void creativeDidCompleteTest() throws Exception {
+
         VideoCreative mockVideoCreative = mock(VideoCreative.class);
         when(mockVideoCreative.getCreativeModel())
                 .thenReturn(new VideoCreativeModel(mock(TrackingManager.class), mock(OmEventTracker.class), new AdUnitConfiguration()));
@@ -233,44 +233,11 @@ public class AdViewManagerTest {
         WhiteBox.field(AdViewManager.class, "adView").set(adViewManager, mockAdView);
 
         adViewManager.creativeDidComplete(mockVideoCreative);
-        verify(mockAdView, never()).closeInterstitialVideo();
+        verify(mockAdView).closeInterstitialVideo();
         verify(mockAdViewListener, times(1)).adCompleted();
 
         adViewManager.creativeDidComplete(mockVideoCreative);
         verify(mockAdViewListener, times(2)).adCompleted();
-    }
-
-    @Test
-    public void creativeDidCompleteWithEndCard_ClosesVideoInterstitial() throws Exception {
-        VideoCreative mockVideoCreative = mock(VideoCreative.class);
-        when(mockVideoCreative.isVideo()).thenReturn(true);
-
-        HTMLCreative mockEndCardCreative = mock(HTMLCreative.class);
-        CreativeFactory mockVideoFactory = mock(CreativeFactory.class);
-        CreativeFactory mockEndCardFactory = mock(CreativeFactory.class);
-        when(mockEndCardFactory.getCreative()).thenReturn(mockEndCardCreative);
-
-        ArrayList<CreativeFactory> creativeFactories = new ArrayList<>();
-        creativeFactories.add(mockVideoFactory);
-        creativeFactories.add(mockEndCardFactory);
-
-        Transaction mockTransaction = mock(Transaction.class);
-        when(mockTransaction.getCreativeFactories()).thenReturn(creativeFactories);
-
-        TransactionManager mockTransactionManager = mock(TransactionManager.class);
-        when(mockTransactionManager.getCurrentTransaction()).thenReturn(mockTransaction);
-        when(mockTransactionManager.hasNextCreative()).thenReturn(true);
-
-        WhiteBox.field(AdViewManager.class, "transactionManager").set(adViewManager, mockTransactionManager);
-        WhiteBox.field(AdViewManager.class, "adView").set(adViewManager, mockAdView);
-
-        adViewManager.creativeDidComplete(mockVideoCreative);
-
-        verify(mockAdView).closeInterstitialVideo();
-        verify(mockTransactionManager).incrementCreativesCounter();
-        verify(mockInterstitialManager).setInterstitialDisplayDelegate(mockEndCardCreative);
-        verify(mockInterstitialManager).displayAdViewInInterstitial(context, mockAdView);
-        verify(mockAdViewListener).adCompleted();
     }
 
     @Test

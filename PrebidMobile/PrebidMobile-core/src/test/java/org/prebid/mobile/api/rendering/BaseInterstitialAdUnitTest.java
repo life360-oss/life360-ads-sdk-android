@@ -25,6 +25,8 @@ import static org.mockito.Mockito.when;
 import android.app.Activity;
 import android.content.Context;
 
+import androidx.annotation.Nullable;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,9 +36,15 @@ import org.prebid.mobile.rendering.bidding.data.bid.Bid;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.bidding.listeners.BidRequesterListener;
 import org.prebid.mobile.rendering.models.AdPosition;
+import org.prebid.mobile.test.utils.WhiteBox;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 19)
@@ -47,7 +55,30 @@ public class BaseInterstitialAdUnitTest {
     @Before
     public void setUp() throws Exception {
         Context context = Robolectric.buildActivity(Activity.class).create().get();
-        baseInterstitialAdUnit = new RenderingTestUtils.TestBaseInterstitialAdUnit(context);
+        baseInterstitialAdUnit = new BaseInterstitialAdUnit(context) {
+            @Override
+            void requestAdWithBid(
+                @Nullable
+                    Bid bid
+            ) {
+
+            }
+
+            @Override
+            void showGamAd() {
+
+            }
+
+            @Override
+            void notifyAdEventListener(AdListenerEvent adListenerEvent) {
+
+            }
+
+            @Override
+            void notifyErrorListener(AdException exception) {
+
+            }
+        };
         final AdUnitConfiguration adUnitConfiguration = new AdUnitConfiguration();
         baseInterstitialAdUnit.init(adUnitConfiguration);
         assertEquals(AdPosition.FULLSCREEN.getValue(), adUnitConfiguration.getAdPositionValue());
@@ -68,7 +99,7 @@ public class BaseInterstitialAdUnitTest {
         final BidResponse mockBidResponse = mock(BidResponse.class);
         final Bid mockBid = mock(Bid.class);
         when(mockBidResponse.getWinningBid()).thenReturn(mockBid);
-        BidRequesterListener listener = RenderingTestUtils.getBidRequesterListener(baseInterstitialAdUnit);
+        BidRequesterListener listener = getBidRequesterListener();
         listener.onFetchCompleted(mockBidResponse);
 
         baseInterstitialAdUnit.loadAd();
@@ -83,12 +114,22 @@ public class BaseInterstitialAdUnitTest {
         assertNull(bidResponse);
 
         final AdException adException = mock(AdException.class);
-        BidRequesterListener listener = RenderingTestUtils.getBidRequesterListener(baseInterstitialAdUnit);
+        BidRequesterListener listener = getBidRequesterListener();
         listener.onError(adException);
         baseInterstitialAdUnit.loadAd();
 
         bidResponse = baseInterstitialAdUnit.getBidResponse();
         assertNull(bidResponse);
+    }
+
+    private BidRequesterListener getBidRequesterListener() {
+        try {
+            return (BidRequesterListener) WhiteBox.field(BaseInterstitialAdUnit.class, "bidRequesterListener")
+                .get(baseInterstitialAdUnit);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }

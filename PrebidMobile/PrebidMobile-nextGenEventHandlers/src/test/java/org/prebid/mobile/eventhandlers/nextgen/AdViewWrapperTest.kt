@@ -19,7 +19,6 @@ import android.app.Activity
 import android.content.Context
 import com.google.android.libraries.ads.mobile.sdk.banner.AdView
 import com.google.android.libraries.ads.mobile.sdk.banner.BannerAd
-import com.google.android.libraries.ads.mobile.sdk.common.BaseAdRequestBuilder
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -129,18 +128,6 @@ class AdViewWrapperTest {
         advanceUntilIdle()
 
         verify(mockListener, times(1))?.onEvent(AdEvent.Loaded())
-    }
-
-    @Test
-    fun loadAd_WithRequestConfiguration_ConfiguresRequest() {
-        var configuredBuilder: BaseAdRequestBuilder<*>? = null
-        val configuration = NextGenAdRequestConfiguration {
-            configuredBuilder = it
-        }
-
-        adViewWrapper.loadAd(null, configuration)
-
-        Assert.assertNotNull(configuredBuilder)
     }
 
     @Test

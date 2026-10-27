@@ -26,6 +26,7 @@ public class UserConsentParameterBuilder extends ParameterBuilder {
     private static final String GDPR = "gdpr";
     private static final String US_PRIVACY = "us_privacy";
     private static final String CONSENT = "consent";
+    private static final String COPPA_SUBJECT = "coppa";
 
     private final UserConsentManager userConsentManager;
 
@@ -68,7 +69,7 @@ public class UserConsentParameterBuilder extends ParameterBuilder {
     private void appendCoppaParameter(BidRequest bidRequest) {
         Boolean subjectToCoppa = userConsentManager.getSubjectToCoppa();
         if (subjectToCoppa != null) {
-            bidRequest.getRegs().coppa = subjectToCoppa ? 1 : 0;
+            bidRequest.getRegs().getExt().put(COPPA_SUBJECT, subjectToCoppa ? 1 : 0);
         }
     }
 

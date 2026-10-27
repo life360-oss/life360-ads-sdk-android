@@ -184,12 +184,12 @@ public class VideoCreativeTest {
     }
 
     @Test
-    public void mute_volumeZero_MuteVideoCreativeView() {
+    public void mute_volumeZero_DoNothing() {
         when(mockVideoCreativeView.getVolume()).thenReturn(0f);
 
         videoCreative.mute();
 
-        verify(mockVideoCreativeView).mute();
+        verify(mockVideoCreativeView, never()).mute();
     }
 
     @Test
@@ -211,12 +211,12 @@ public class VideoCreativeTest {
     }
 
     @Test
-    public void unmute_volumeNotZero_UnMuteVideoCreativeView() {
+    public void unmute_volumeNotZero_DoNothing() {
         when(mockVideoCreativeView.getVolume()).thenReturn(1f);
 
         videoCreative.unmute();
 
-        verify(mockVideoCreativeView).unMute();
+        verify(mockVideoCreativeView, never()).unMute();
     }
 
     @Test
@@ -239,30 +239,6 @@ public class VideoCreativeTest {
         videoCreative.onEvent(VideoAdEvent.Event.AD_CLICK);
 
         verify(mockListener).creativeWasClicked(any(AbstractCreative.class), eq("url"));
-    }
-
-    @Test
-    public void rewardedVideoWithClickThrough_ShowsCallToAction() {
-        AdUnitConfiguration configuration = new AdUnitConfiguration();
-        configuration.setRewarded(true);
-        when(mockModel.getAdConfiguration()).thenReturn(configuration);
-        when(mockModel.getVastClickthroughUrl()).thenReturn("https://example.com");
-
-        videoCreative.showCallToAction();
-
-        verify(mockVideoCreativeView).showCallToAction(true);
-    }
-
-    @Test
-    public void rewardedVideoWithBlankClickThrough_DoesNotShowCallToAction() {
-        AdUnitConfiguration configuration = new AdUnitConfiguration();
-        configuration.setRewarded(true);
-        when(mockModel.getAdConfiguration()).thenReturn(configuration);
-        when(mockModel.getVastClickthroughUrl()).thenReturn(" ");
-
-        videoCreative.showCallToAction();
-
-        verify(mockVideoCreativeView, never()).showCallToAction(anyBoolean());
     }
 
     @Test

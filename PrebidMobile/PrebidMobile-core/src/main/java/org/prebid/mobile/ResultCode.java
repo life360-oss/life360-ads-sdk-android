@@ -72,9 +72,5 @@ public enum ResultCode {
     /**
      * Check @{@link org.prebid.mobile.api.original.PrebidRequest} object that you put into fetchDemand().
      */
-    INVALID_PREBID_REQUEST_OBJECT,
-    /**
-     * Prebid Server returned bids, but none had successful cache entries.
-     */
-    NO_CACHED_BIDS
+    INVALID_PREBID_REQUEST_OBJECT
 }

@@ -120,13 +120,14 @@ internal class AdViewWrapper private constructor(
         }
     }
 
-    fun loadAd(
-        bid: Bid?,
-        requestConfiguration: NextGenAdRequestConfiguration? = null,
-    ) {
+    fun loadAd(bid: Bid?) {
         try {
             val adRequestBuilder = BannerAdRequest.Builder(nextAdUnit, nextSizes)
-            Utils.configureAdRequest(adRequestBuilder, bid, requestConfiguration)
+
+            bid?.let {
+                val targetingMap = HashMap(it.prebid.targeting)
+                Utils.handleCustomTargetingUpdate(adRequestBuilder, targetingMap)
+            }
 
             adView.loadAd(adRequestBuilder.build(), this)
         } catch (throwable: Throwable) {

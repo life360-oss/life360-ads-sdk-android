@@ -522,10 +522,6 @@ public abstract class AdBaseDialog extends Dialog {
                 adBaseDialog.addSkipView();
             }
 
-            if (adBaseDialog.adViewContainer instanceof ControlInsetsRefresher) {
-                ((ControlInsetsRefresher) adBaseDialog.adViewContainer).refreshControlInsets();
-            }
-
             adBaseDialog.interstitialManager.interstitialDialogShown(adBaseDialog.adViewContainer);
             final DialogEventListener listener = adBaseDialog.listener;
 

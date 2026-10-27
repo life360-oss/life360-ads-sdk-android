@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.prebid.mobile.api.rendering.pluginrenderer.PrebidMobilePluginRegister.PREBID_MOBILE_RENDERER_NAME;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -29,8 +28,6 @@ public class PrebidMobilePluginRegisterTest {
     @Before
     public void setUp() {
         instance = PrebidMobilePluginRegister.getInstance();
-        instance.unregisterAllPlugins();
-
         mockPlugin = mock(PrebidMobilePluginRenderer.class);
         mockBidResponse = mock(BidResponse.class);
         mockAdUnitConfiguration = mock(AdUnitConfiguration.class);
@@ -39,11 +36,6 @@ public class PrebidMobilePluginRegisterTest {
         PrebidMobilePluginRenderer mockPrebidPlugin = mock(PrebidMobilePluginRenderer.class);
         when(mockPrebidPlugin.getName()).thenReturn(PREBID_MOBILE_RENDERER_NAME);
         instance.registerPlugin(mockPrebidPlugin);
-    }
-
-    @After
-    public void tearDown() {
-        instance.unregisterAllPlugins();
     }
 
     @Test

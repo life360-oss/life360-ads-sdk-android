@@ -40,8 +40,8 @@ dependencies {
 
     implementation libs.google.play.services.base
     implementation libs.google.play.services.ads.identifier
-    implementation libs.media3.exoplayer
-    implementation libs.media3.ui
+    implementation libs.exoplayer.core
+    implementation libs.exoplayer.ui
 
     implementation libs.androidx.browser
     implementation libs.androidx.localbroadcastmanager

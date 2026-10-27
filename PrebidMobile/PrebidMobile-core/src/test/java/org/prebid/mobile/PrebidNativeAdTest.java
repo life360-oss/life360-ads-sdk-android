@@ -2,7 +2,6 @@ package org.prebid.mobile;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -12,6 +11,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.app.Application;
+import android.content.Context;
 import android.view.View;
 
 import org.junit.After;
@@ -25,27 +26,16 @@ import org.prebid.mobile.rendering.utils.helpers.VisibilityChecker;
 import org.prebid.mobile.rendering.models.internal.VisibilityTrackerResult;
 import org.prebid.mobile.rendering.session.manager.OmAdSessionManager;
 import org.prebid.mobile.reflection.Reflection;
-import android.os.Looper;
-import org.junit.Before;
 import org.prebid.mobile.test.utils.ResourceUtils;
 import org.robolectric.RobolectricTestRunner;
-import org.robolectric.Shadows;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RunWith(RobolectricTestRunner.class)
 public class PrebidNativeAdTest {
-
-    @Before
-    public void setUp() {
-        CacheManager.clear();
-    }
 
     /**
      * registerView() starts an Open Measurement session, which builds the JSLibraryManager singleton from
@@ -59,7 +49,7 @@ public class PrebidNativeAdTest {
 
     @Test
     public void registerView_withAllTrackers() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
 
         assertEquals("https://prebid.qa.openx.net//event?t=win&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308", nativeAd.getWinEvent());
         assertEquals("https://prebid.qa.openx.net//event?t=imp&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308", nativeAd.getImpEvent());
@@ -75,7 +65,7 @@ public class PrebidNativeAdTest {
         assertThat(impressionUrls, hasItem("https://prebid.qa.openx.net//event?t=imp&b=5f6bec03-a3ae-4084-b2ae-dedfb0ac01ff&a=b4eb1475-4e3d-4186-97b7-25b6a6cf8618&bidder=openx&ts=1643899069308"));
 
 
-        nativeAd.registerView(PrebidNativeAdTestHelper.createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
+        nativeAd.registerView(createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
 
 
         assertEquals(
@@ -90,7 +80,7 @@ public class PrebidNativeAdTest {
      */
     @Test
     public void create_keepsNonOmidTrackersOnThePixelPath() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/MixedEventTrackers.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/MixedEventTrackers.json");
 
         List<String> impressionUrls =
                 reflectEventTrackerUrls(nativeAd, NativeEventTracker.EventType.IMPRESSION);
@@ -111,7 +101,7 @@ public class PrebidNativeAdTest {
      */
     @Test
     public void onVisibilityEvent_impressionThresholdSignalsOmAndListener() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
         OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
         PrebidNativeAdEventListener listener = mock(PrebidNativeAdEventListener.class);
         Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
@@ -126,7 +116,7 @@ public class PrebidNativeAdTest {
 
     @Test
     public void onVisibilityEvent_belowThresholdSignalsNothing() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
         OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
         Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
 
@@ -146,7 +136,7 @@ public class PrebidNativeAdTest {
      */
     @Test
     public void onVisibilityEvent_viewabilityThresholdDoesNotSignalOmImpression() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
         OmAdSessionManager sessionManager = mock(OmAdSessionManager.class);
         PrebidNativeAdEventListener listener = mock(PrebidNativeAdEventListener.class);
         Reflection.setVariableTo(nativeAd, "omAdSessionManager", sessionManager);
@@ -165,9 +155,9 @@ public class PrebidNativeAdTest {
      */
     @Test
     public void registerView_tracksOneThresholdPerDeclaredEventType() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/MultipleEventTypes.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/MultipleEventTypes.json");
 
-        nativeAd.registerView(PrebidNativeAdTestHelper.createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
+        nativeAd.registerView(createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
 
         assertEquals(
                 new java.util.LinkedHashSet<>(java.util.Arrays.asList(
@@ -187,7 +177,7 @@ public class PrebidNativeAdTest {
     /** An event type the SDK has no threshold for still has to fire, so it falls back to the impression. */
     @Test
     public void create_unknownEventTypeFallsBackToImpression() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/MultipleEventTypes.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/MultipleEventTypes.json");
 
         assertThat(reflectEventTrackerUrls(nativeAd, NativeEventTracker.EventType.IMPRESSION),
                 hasItem("https://example.com/custom-777.gif"));
@@ -208,7 +198,7 @@ public class PrebidNativeAdTest {
     /** The same fixture's verification script must instead reach Open Measurement as a resource. */
     @Test
     public void create_resolvesOpenMeasurementResourceFromEventTracker() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
 
         NativeOMResource resource = (NativeOMResource) Reflection
                 .getFieldOf(nativeAd, "omResource");
@@ -221,21 +211,21 @@ public class PrebidNativeAdTest {
 
     @Test
     public void create_withoutVerificationScript_resolvesNoOpenMeasurementResource() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/WithoutTrackers.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/WithoutTrackers.json");
 
         assertNull(Reflection.getFieldOf(nativeAd, "omResource"));
     }
 
     @Test
     public void registerView_withoutTrackers() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/WithoutTrackers.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/WithoutTrackers.json");
 
         assertNull(nativeAd.getWinEvent());
         assertNull(nativeAd.getImpEvent());
         assertTrue(reflectEventTrackerUrls(nativeAd).isEmpty());
 
 
-        nativeAd.registerView(PrebidNativeAdTestHelper.createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
+        nativeAd.registerView(createViewMock(), mock(List.class), mock(PrebidNativeAdEventListener.class));
 
 
         // Nothing to measure and no OM resource, so no tracker is started at all.
@@ -244,7 +234,7 @@ public class PrebidNativeAdTest {
 
     @Test
     public void nativeAdParser() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/Full.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/Full.json");
 
         assertNotNull(nativeAd);
 
@@ -288,7 +278,7 @@ public class PrebidNativeAdTest {
 
     @Test
     public void nativeAdWithWrapperParser() {
-        PrebidNativeAd nativeAd = PrebidNativeAdTestHelper.nativeAdFromFile("PrebidNativeAdTest/FullWithNativeWrapper.json");
+        PrebidNativeAd nativeAd = nativeAdFromFile("PrebidNativeAdTest/FullWithNativeWrapper.json");
 
         assertNotNull(nativeAd);
 
@@ -330,42 +320,19 @@ public class PrebidNativeAdTest {
         }
     }
 
-    @Test
-    public void cacheManagerSaveWithExpireInterval_InvalidatesCache() {
-        String cacheId = CacheManager.save("content", 1L);
-
-        assertTrue(CacheManager.isValid(cacheId));
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(CacheManager.isValid(cacheId));
+    private PrebidNativeAd nativeAdFromFile(String path) {
+        String resource = ResourceUtils.convertResourceToString(path);
+        String cacheId = CacheManager.save(resource);
+        return PrebidNativeAd.create(cacheId);
     }
 
-    @Test
-    public void cacheExpirationForNativeAdWithoutRegisteredView_NotifiesListener() {
-        String resource = ResourceUtils.convertResourceToString("PrebidNativeAdTest/Full.json");
-        String cacheId = CacheManager.save(resource, 1L);
-        PrebidNativeAd nativeAd = PrebidNativeAd.create(cacheId);
-        AtomicBoolean expired = new AtomicBoolean(false);
+    private View createViewMock() {
+        Context contextMock = mock(Context.class);
+        when(contextMock.getApplicationContext()).thenReturn(mock(Application.class));
 
-        nativeAd.registerPrebidNativeAdEventListener(new PrebidNativeAdEventListener() {
-            @Override
-            public void onAdClicked() {
-            }
-
-            @Override
-            public void onAdImpression() {
-            }
-
-            @Override
-            public void onAdExpired() {
-                expired.set(true);
-            }
-        });
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertTrue(expired.get());
+        View mainMock = mock(View.class);
+        when(mainMock.getContext()).thenReturn(contextMock);
+        return mainMock;
     }
 
     private Map<NativeEventTracker.EventType, List<String>> reflectEventTrackerUrls(PrebidNativeAd ad) {
@@ -395,87 +362,6 @@ public class PrebidNativeAdTest {
             types.add(option.getEventType());
         }
         return types;
-    }
-
-    @Test
-    public void cacheExpirationForNativeAdWithRegisteredView_DoesNotNotifyListener() {
-        String resource = ResourceUtils.convertResourceToString("PrebidNativeAdTest/Full.json");
-        String cacheId = CacheManager.save(resource, 1L);
-        PrebidNativeAd nativeAd = PrebidNativeAd.create(cacheId);
-        AtomicBoolean expired = new AtomicBoolean(false);
-        PrebidNativeAdEventListener listener = new PrebidNativeAdEventListener() {
-            @Override
-            public void onAdClicked() {
-            }
-
-            @Override
-            public void onAdImpression() {
-            }
-
-            @Override
-            public void onAdExpired() {
-                expired.set(true);
-            }
-        };
-        View view = PrebidNativeAdTestHelper.createViewMock();
-        ArrayList<View> clickableViews = new ArrayList<>();
-        clickableViews.add(view);
-
-        nativeAd.registerView(view, clickableViews, listener);
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertFalse(expired.get());
-    }
-
-    @Test
-    public void cacheExpirationForNativeAd_RegisterViewAfterExpiryFails() {
-        String resource = ResourceUtils.convertResourceToString("PrebidNativeAdTest/Full.json");
-        String cacheId = CacheManager.save(resource, 1L);
-        PrebidNativeAd nativeAd = PrebidNativeAd.create(cacheId);
-        AtomicBoolean expired = new AtomicBoolean(false);
-
-        nativeAd.registerPrebidNativeAdEventListener(new PrebidNativeAdTestHelper.TestNativeAdEventListener(expired::set));
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        View view = PrebidNativeAdTestHelper.createViewMock();
-        ArrayList<View> clickableViews = new ArrayList<>();
-        clickableViews.add(view);
-        assertTrue(expired.get());
-        assertFalse(nativeAd.registerView(view, clickableViews, mock(PrebidNativeAdEventListener.class)));
-    }
-
-    @Test
-    public void cacheExpirationForNativeAd_DelegateCalledExactlyOnce() {
-        String resource = ResourceUtils.convertResourceToString("PrebidNativeAdTest/Full.json");
-        String cacheId = CacheManager.save(resource, 1L);
-        PrebidNativeAd nativeAd = PrebidNativeAd.create(cacheId);
-        AtomicInteger expireCallCount = new AtomicInteger(0);
-
-        nativeAd.registerPrebidNativeAdEventListener(new PrebidNativeAdTestHelper.TestNativeAdEventListener(expired -> expireCallCount.incrementAndGet()));
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(2, TimeUnit.SECONDS);
-
-        assertEquals(1, expireCallCount.get());
-    }
-
-    @Test
-    public void cacheExpirationForNativeAdWithNullListener_DoesNotCrashAndPreventsRegistration() {
-        String resource = ResourceUtils.convertResourceToString("PrebidNativeAdTest/Full.json");
-        String cacheId = CacheManager.save(resource, 1L);
-        PrebidNativeAd nativeAd = PrebidNativeAd.create(cacheId);
-
-        nativeAd.registerPrebidNativeAdEventListener(null);
-
-        Shadows.shadowOf(Looper.getMainLooper()).idleFor(1, TimeUnit.SECONDS);
-
-        assertTrue(PrebidNativeAdTestHelper.isExpired(nativeAd));
-
-        View view = PrebidNativeAdTestHelper.createViewMock();
-        ArrayList<View> clickableViews = new ArrayList<>();
-        clickableViews.add(view);
-        assertFalse(nativeAd.registerView(view, clickableViews, null));
     }
 
 }

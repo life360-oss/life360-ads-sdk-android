@@ -123,9 +123,7 @@ public class AdInterstitialDialog extends AdBaseDialog {
             }
 
             setBackgroundListener();
-            if (!config.getHasEndCard()) {
-                changeCloseViewVisibility(View.GONE);
-            }
+            changeCloseViewVisibility(View.GONE);
 
             RewardedExt rewardedExt = rewardManager.getRewardedExt();
             int defaultRewardTime = RewardedCompletionRules.DEFAULT_BANNER_TIME_MS;

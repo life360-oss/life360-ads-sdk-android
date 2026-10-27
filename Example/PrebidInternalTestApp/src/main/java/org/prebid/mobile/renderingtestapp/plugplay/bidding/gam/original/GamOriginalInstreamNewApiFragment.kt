@@ -2,12 +2,16 @@ package org.prebid.mobile.renderingtestapp.plugplay.bidding.gam.original
 
 import android.net.Uri
 import android.view.ViewGroup
-import androidx.media3.common.MediaItem
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.ima.ImaAdsLoader
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.ui.PlayerView
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.SimpleExoPlayer
+import com.google.android.exoplayer2.ext.ima.ImaAdsLoader
+import com.google.android.exoplayer2.source.MediaSource
+import com.google.android.exoplayer2.source.ProgressiveMediaSource
+import com.google.android.exoplayer2.source.ads.AdsMediaSource
+import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.upstream.DataSource
+import com.google.android.exoplayer2.upstream.DataSpec
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import org.prebid.mobile.*
 import org.prebid.mobile.renderingtestapp.AdFragment
 import org.prebid.mobile.renderingtestapp.R
@@ -17,7 +21,7 @@ import org.prebid.mobile.renderingtestapp.plugplay.config.AdConfiguratorDialogFr
 class GamOriginalInstreamNewApiFragment : AdFragment() {
 
     private var adUnit: InStreamVideoAdUnit? = null
-    private var player: ExoPlayer? = null
+    private var player: SimpleExoPlayer? = null
     private var adsUri: Uri? = null
     private var adsLoader: ImaAdsLoader? = null
     private var playerView: PlayerView? = null
@@ -45,7 +49,8 @@ class GamOriginalInstreamNewApiFragment : AdFragment() {
                     it.targetingKeywords
                 )
             )
-            adsLoader = ImaAdsLoader.Builder(requireActivity()).build()
+            val imaBuilder = ImaAdsLoader.Builder(requireActivity())
+            adsLoader = imaBuilder.build()
             initializePlayer()
         }
     }
@@ -70,24 +75,25 @@ class GamOriginalInstreamNewApiFragment : AdFragment() {
     }
 
     private fun initializePlayer() {
-        val dataSourceFactory = DefaultDataSource.Factory(requireContext())
-        val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory)
-            .setLocalAdInsertionComponents({ adsLoader!! }, playerView!!)
-
-        player = ExoPlayer.Builder(requireContext())
-            .setMediaSourceFactory(mediaSourceFactory)
-            .build()
+        val playerBuilder = SimpleExoPlayer.Builder(requireContext())
+        player = playerBuilder.build()
         playerView!!.player = player
         adsLoader!!.setPlayer(player)
 
-        val mediaItem = MediaItem.Builder()
-            .setUri(Uri.parse("https://storage.googleapis.com/gvabox/media/samples/stock.mp4"))
-            .setAdsConfiguration(
-                MediaItem.AdsConfiguration.Builder(adsUri!!).build()
-            )
-            .build()
+        val uri = Uri.parse("https://storage.googleapis.com/gvabox/media/samples/stock.mp4")
+        // Uri uri = Uri.parse("<![CDATA[https://storage.googleapis.com/gvabox/media/samples/stock.mp4]]>");
 
-        player?.setMediaItem(mediaItem)
+        val mediaItem = MediaItem.fromUri(uri)
+        val dataSourceFactory: DataSource.Factory =
+            DefaultDataSourceFactory(requireContext(), getString(R.string.app_name))
+        val mediaSourceFactory = ProgressiveMediaSource.Factory(dataSourceFactory)
+        val mediaSource: MediaSource = mediaSourceFactory.createMediaSource(mediaItem)
+        val dataSpec = DataSpec(adsUri!!)
+        val adsMediaSource = AdsMediaSource(
+            mediaSource, dataSpec, "ad", mediaSourceFactory,
+            adsLoader!!, playerView!!
+        )
+        player?.setMediaSource(adsMediaSource)
         player?.playWhenReady = true
         player?.prepare()
     }

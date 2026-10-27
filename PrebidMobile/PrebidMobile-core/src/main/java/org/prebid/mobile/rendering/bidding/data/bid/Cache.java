@@ -23,7 +23,6 @@ public class Cache {
     private String key;
     private String url;
     private Bids bids;
-    private Bids vastXml;
 
     protected Cache() {
     }
@@ -43,17 +42,6 @@ public class Cache {
         return bids;
     }
 
-    public Bids getVastXml() {
-        if (vastXml == null) {
-            vastXml = new Bids();
-        }
-        return vastXml;
-    }
-
-    public boolean hasSuccessfulServerCache() {
-        return getBids().hasCacheData() || getVastXml().hasCacheData();
-    }
-
     public static Cache fromJSONObject(JSONObject jsonObject) {
         Cache cache = new Cache();
         if (jsonObject == null) {
@@ -62,11 +50,6 @@ public class Cache {
         cache.key = jsonObject.optString("key");
         cache.url = jsonObject.optString("url");
         cache.bids = Bids.fromJSONObject(jsonObject.optJSONObject("bids"));
-        JSONObject vastXmlObject = jsonObject.optJSONObject("vastXml");
-        if (vastXmlObject == null) {
-            vastXmlObject = jsonObject.optJSONObject("vastxml");
-        }
-        cache.vastXml = Bids.fromJSONObject(vastXmlObject);
 
         return cache;
     }

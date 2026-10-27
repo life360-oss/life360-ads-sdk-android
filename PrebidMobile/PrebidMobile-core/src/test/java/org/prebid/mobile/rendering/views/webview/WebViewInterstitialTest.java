@@ -23,7 +23,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.prebid.mobile.rendering.sdk.ManagersResolver;
 import org.prebid.mobile.rendering.sdk.deviceData.managers.DeviceInfoManager;
-import org.prebid.mobile.rendering.views.webview.mraid.MainThreadJSInterface;
 import org.prebid.mobile.test.utils.ResourceUtils;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
@@ -33,10 +32,8 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 19)
@@ -77,14 +74,5 @@ public class WebViewInterstitialTest {
         );
         webViewInterstitial.setJSName("test");
         assertEquals("test", webViewInterstitial.MRAIDBridgeName);
-    }
-
-    @Test
-    public void setMRAIDInterface_RegistersMainThreadJSInterface() {
-        WebViewInterstitial webViewInterstitial = new WebViewInterstitial(context, adHTML, 100, 200,
-                mockPreloadListener, mockMraidListener
-        );
-
-        assertTrue(shadowOf(webViewInterstitial).getJavascriptInterface("jsBridge") instanceof MainThreadJSInterface);
     }
 }

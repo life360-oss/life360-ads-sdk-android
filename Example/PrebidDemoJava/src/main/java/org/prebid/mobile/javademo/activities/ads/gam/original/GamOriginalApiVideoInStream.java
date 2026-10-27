@@ -5,17 +5,23 @@ import android.os.Bundle;
 import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
-import androidx.media3.common.MediaItem;
-import androidx.media3.datasource.DefaultDataSource;
-import androidx.media3.exoplayer.ExoPlayer;
-import androidx.media3.exoplayer.ima.ImaAdsLoader;
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
-import androidx.media3.ui.PlayerView;
+
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ext.ima.ImaAdsLoader;
+import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.ProgressiveMediaSource;
+import com.google.android.exoplayer2.source.ads.AdsMediaSource;
+import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.exoplayer2.upstream.DataSource;
+import com.google.android.exoplayer2.upstream.DataSpec;
+import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
 
 import org.prebid.mobile.InStreamVideoAdUnit;
 import org.prebid.mobile.Signals;
 import org.prebid.mobile.Util;
 import org.prebid.mobile.VideoParameters;
+import org.prebid.mobile.javademo.R;
 import org.prebid.mobile.javademo.activities.BaseAdActivity;
 
 import java.util.Collections;
@@ -32,7 +38,7 @@ public class GamOriginalApiVideoInStream extends BaseAdActivity {
     private static final String VIDEO_URL = "https://storage.googleapis.com/gvabox/media/samples/stock.mp4";
 
     private InStreamVideoAdUnit adUnit;
-    private ExoPlayer player;
+    private SimpleExoPlayer player;
     private Uri adsUri;
     private ImaAdsLoader adsLoader;
     private PlayerView playerView;
@@ -63,31 +69,29 @@ public class GamOriginalApiVideoInStream extends BaseAdActivity {
             sizes.add(new org.prebid.mobile.AdSize(WIDTH, HEIGHT));
             adsUri = Uri.parse(Util.generateInstreamUriForGam(AD_UNIT_ID, sizes, bidInfo.getTargetingKeywords()));
 
-            adsLoader = new ImaAdsLoader.Builder(this).build();
+            ImaAdsLoader.Builder imaBuilder = new ImaAdsLoader.Builder(this);
+            adsLoader = imaBuilder.build();
 
             initializePlayer();
         });
     }
 
     private void initializePlayer() {
-        DefaultDataSource.Factory dataSourceFactory = new DefaultDataSource.Factory(this);
-        DefaultMediaSourceFactory mediaSourceFactory = new DefaultMediaSourceFactory(dataSourceFactory)
-                .setLocalAdInsertionComponents(unusedAdTagUri -> adsLoader, playerView);
-
-        player = new ExoPlayer.Builder(this)
-                .setMediaSourceFactory(mediaSourceFactory)
-                .build();
+        SimpleExoPlayer.Builder playerBuilder = new SimpleExoPlayer.Builder(this);
+        player = playerBuilder.build();
         playerView.setPlayer(player);
         adsLoader.setPlayer(player);
 
-        MediaItem mediaItem = new MediaItem.Builder()
-                .setUri(Uri.parse(VIDEO_URL))
-                .setAdsConfiguration(
-                        new MediaItem.AdsConfiguration.Builder(adsUri).build()
-                )
-                .build();
+        Uri uri = Uri.parse(VIDEO_URL);
+        MediaItem mediaItem = MediaItem.fromUri(uri);
+        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, getString(R.string.app_name));
+        ProgressiveMediaSource.Factory mediaSourceFactory = new ProgressiveMediaSource.Factory(dataSourceFactory);
+        MediaSource mediaSource = mediaSourceFactory.createMediaSource(mediaItem);
 
-        player.setMediaItem(mediaItem);
+        DataSpec dataSpec = new DataSpec(adsUri);
+        AdsMediaSource adsMediaSource = new AdsMediaSource(mediaSource, dataSpec, "ad", mediaSourceFactory, adsLoader, playerView);
+
+        player.setMediaSource(adsMediaSource);
         player.setPlayWhenReady(true);
         player.prepare();
     }

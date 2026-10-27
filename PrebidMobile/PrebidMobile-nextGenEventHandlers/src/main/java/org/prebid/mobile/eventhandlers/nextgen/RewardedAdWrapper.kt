@@ -115,13 +115,14 @@ internal class RewardedAdWrapper(
         }
     }
 
-    fun loadAd(
-        bid: Bid?,
-        requestConfiguration: NextGenAdRequestConfiguration? = null,
-    ) {
+    fun loadAd(bid: Bid?) {
         try {
             val requestBuilder = AdRequest.Builder(adUnitId)
-            Utils.configureAdRequest(requestBuilder, bid, requestConfiguration)
+
+            bid?.let {
+                val targetingMap = HashMap(bid.getPrebid().targeting)
+                Utils.handleCustomTargetingUpdate(requestBuilder, targetingMap)
+            }
 
             RewardedAd.load(
                 requestBuilder.build(),

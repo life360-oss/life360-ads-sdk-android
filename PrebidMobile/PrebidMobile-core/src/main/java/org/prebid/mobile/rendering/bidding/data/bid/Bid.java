@@ -265,10 +265,6 @@ public class Bid {
         return jsonString;
     }
 
-    public boolean hasSuccessfulServerCache() {
-        return getPrebid().getCache().hasSuccessfulServerCache();
-    }
-
     public MobileSdkPassThrough getMobileSdkPassThrough() {
         return mobileSdkPassThrough;
     }

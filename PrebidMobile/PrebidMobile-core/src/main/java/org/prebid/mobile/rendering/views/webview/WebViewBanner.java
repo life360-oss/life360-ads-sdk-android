@@ -25,7 +25,6 @@ import org.prebid.mobile.rendering.utils.helpers.HandlerQueueManager;
 import org.prebid.mobile.rendering.views.webview.mraid.BannerJSInterface;
 import org.prebid.mobile.rendering.views.webview.mraid.BaseJSInterface;
 import org.prebid.mobile.rendering.views.webview.mraid.JsExecutor;
-import org.prebid.mobile.rendering.views.webview.mraid.MainThreadJSInterface;
 
 public class WebViewBanner extends WebViewBase {
 
@@ -63,7 +62,7 @@ public class WebViewBanner extends WebViewBase {
                                                                                          new Handler(Looper.getMainLooper()),
                                                                                          new HandlerQueueManager()));
 
-        addJavascriptInterface(new MainThreadJSInterface(mraid), "jsBridge");
+        addJavascriptInterface(mraid, "jsBridge");
         LogUtil.debug(TAG, "JS bridge initialized");
         setBaseJSInterface(mraid);
     }

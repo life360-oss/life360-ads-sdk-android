@@ -3,20 +3,16 @@ package org.prebid.mobile.admob;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
 import com.google.android.gms.ads.mediation.MediationAdLoadCallback;
 import com.google.android.gms.ads.mediation.MediationRewardedAd;
 import com.google.android.gms.ads.mediation.MediationRewardedAdCallback;
 import com.google.android.gms.ads.mediation.MediationRewardedAdConfiguration;
-
-import org.prebid.mobile.api.data.AdFormat;
+import com.google.android.gms.ads.rewarded.RewardItem;
+import org.jetbrains.annotations.NotNull;
 import org.prebid.mobile.api.exceptions.AdException;
-import org.prebid.mobile.api.rendering.PrebidMobileInterstitialControllerInterface;
-import org.prebid.mobile.configuration.AdUnitConfiguration;
-import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
-import org.prebid.mobile.rendering.bidding.display.BidResponseCache;
-import org.prebid.mobile.rendering.bidding.display.PluginRendererFactory;
+import org.prebid.mobile.rendering.bidding.display.InterstitialController;
 import org.prebid.mobile.rendering.bidding.interfaces.InterstitialControllerListener;
+import org.prebid.mobile.rendering.interstitial.rewarded.Reward;
 
 /**
  * Prebid rewarded adapter for AdMob integration.
@@ -27,7 +23,7 @@ public class PrebidRewardedAdapter extends PrebidBaseAdapter {
     public static final String EXTRA_RESPONSE_ID = "PrebidRewardedAdapterExtraId";
 
     @Nullable
-    private PrebidMobileInterstitialControllerInterface interstitialController;
+    private InterstitialController interstitialController;
     @Nullable
     private MediationRewardedAdCallback rewardedAdCallback;
 
@@ -45,26 +41,14 @@ public class PrebidRewardedAdapter extends PrebidBaseAdapter {
             return;
         }
 
-        BidResponse bidResponse = BidResponseCache.getInstance().popBidResponse(responseId);
-        if (bidResponse == null) {
-            adMobLoadListener.onFailure(AdErrors.noResponse(responseId));
-            return;
+        try {
+            InterstitialControllerListener prebidListener = getListener(adMobLoadListener);
+            interstitialController = new InterstitialController(configuration.getContext(), prebidListener);
+            interstitialController.setRewardListener(prebidListener::onUserEarnedReward);
+            interstitialController.loadAd(responseId, true);
+        } catch (AdException e) {
+            adMobLoadListener.onFailure(AdErrors.interstitialControllerError(e.getMessage()));
         }
-
-        InterstitialControllerListener prebidListener = getListener(adMobLoadListener);
-        AdUnitConfiguration config = new AdUnitConfiguration();
-        config.setAdFormat(bidResponse.isVideo() ? AdFormat.VAST : AdFormat.INTERSTITIAL);
-        config.setRewarded(true);
-        config.getRewardManager().setRewardListener(prebidListener::onUserEarnedReward);
-
-        interstitialController = PluginRendererFactory.createInterstitialController(
-                configuration.getContext(), prebidListener, config, bidResponse
-        );
-        if (interstitialController == null) {
-            adMobLoadListener.onFailure(AdErrors.interstitialControllerError("Renderer returned null controller"));
-            return;
-        }
-        interstitialController.loadAd(config, bidResponse);
     }
 
     private InterstitialControllerListener getListener(
@@ -113,7 +97,7 @@ public class PrebidRewardedAdapter extends PrebidBaseAdapter {
 
             @Override
             public void onUserEarnedReward() {
-                if (rewardedAdCallback != null) {
+                if (rewardedAdCallback != null && interstitialController != null) {
                     rewardedAdCallback.onUserEarnedReward();
                 }
             }

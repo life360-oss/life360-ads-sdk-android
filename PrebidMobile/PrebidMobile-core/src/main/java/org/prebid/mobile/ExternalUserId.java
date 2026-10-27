@@ -23,31 +23,23 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 /**
  * User id object from an external third-party source for additional targeting.
- * <a href="https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/main/2.6.md#3227---object-eid-">OpenRTB 2.6 EID object</a>,
- * <a href="https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/extensions/2.x_official_extensions/eids.md">OpenRTB 2.5 extended identifiers</a>.
+ * <a href="https://github.com/InteractiveAdvertisingBureau/openrtb/blob/main/extensions/2.x_official_extensions/eids.md">OpenRTB extended identifiers</a>.
  */
 public class ExternalUserId {
 
     private static final String TAG = "ExternalUserId";
 
     @NonNull
-    private final String source;
+    private String source;
     @NonNull
-    private final List<UniqueId> uniqueIds;
+    private List<UniqueId> uniqueIds;
     @Nullable
     private Map<String, Object> ext;
-    @Nullable
-    private String inserter;
-    @Nullable
-    private String matcher;
-    @Nullable
-    private Integer mm;
 
     /**
      * Default constructor.
@@ -69,47 +61,11 @@ public class ExternalUserId {
 
     @NonNull
     public Map<String, Object> getExt() {
-        return ext == null ? Collections.emptyMap() : ext;
+        return ext;
     }
 
     public void setExt(@Nullable Map<String, Object> ext) {
         this.ext = ext;
-    }
-
-    @Nullable
-    public String getInserter() {
-        return inserter;
-    }
-
-    /**
-     * Canonical domain of the entity that added this ID to the request. ORTB: {@code user.eids[].inserter}
-     */
-    public void setInserter(@Nullable String inserter) {
-        this.inserter = inserter;
-    }
-
-    @Nullable
-    public String getMatcher() {
-        return matcher;
-    }
-
-    /**
-     * Technology that provided the match method in {@code mm}. ORTB: {@code user.eids[].matcher}
-     */
-    public void setMatcher(@Nullable String matcher) {
-        this.matcher = matcher;
-    }
-
-    @Nullable
-    public Integer getMm() {
-        return mm;
-    }
-
-    /**
-     * Match method used by the matcher, from the AdCOM 1.0 list "ID Match Methods". ORTB: {@code user.eids[].mm}
-     */
-    public void setMm(@Nullable Integer mm) {
-        this.mm = mm;
     }
 
     @Nullable
@@ -134,9 +90,6 @@ public class ExternalUserId {
 
             rootJson.put("source", source);
             rootJson.put("uids", uniqueIdArray);
-            rootJson.putOpt("inserter", inserter);
-            rootJson.putOpt("matcher", matcher);
-            rootJson.putOpt("mm", mm);
             if (ext != null) {
                 rootJson.putOpt("ext", new JSONObject(ext));
             }
@@ -150,9 +103,9 @@ public class ExternalUserId {
     public static class UniqueId {
 
         @NonNull
-        private final String id;
+        private String id;
         @NonNull
-        private final Integer atype;
+        private Integer atype;
         @Nullable
         private Map<String, Object> ext;
 

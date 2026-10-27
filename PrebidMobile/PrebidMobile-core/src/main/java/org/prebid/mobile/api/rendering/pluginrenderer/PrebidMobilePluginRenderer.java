@@ -91,15 +91,4 @@ public interface PrebidMobilePluginRenderer {
      * @param inBannerView The BannerView container where the view was added.
      */
     default void didInjectView(@NonNull View view, @NonNull View inBannerView, @NonNull BidResponse bidResponse) { }
-
-    /**
-     * Returns true if the renderer, or the ad SDK it wraps, sends the win notice for its ads itself.
-     * <p>
-     * When a plugin renderer creates the ad, Prebid sends the bid's win notice: {@code nurl},
-     * the Prebid Cache URLs and {@code ext.prebid.events.win}. Return true so that Prebid does not
-     * send it a second time. The default returns false, and Prebid sends the win notice.
-     */
-    default boolean sendsWinNotice() {
-        return false;
-    }
 }
