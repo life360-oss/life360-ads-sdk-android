@@ -32,8 +32,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>
  * The two scripts load by different mechanisms. omsdk.js is a packaged asset, read synchronously on
  * first use, because measurement vendors validate the OMID service version against the native SDK's
- * and a runtime-fetched script cannot guarantee that pairing. mraid.js is still downloaded in the
- * background, so {@link #getMRAIDScript()} returns an empty string until that completes.
+ * and a runtime-fetched script cannot guarantee that pairing. mraid.js is likewise loaded from the
+ * on-device asset rather than downloaded, so it is available on the first call.
+ * <p>
+ * The download path ({@link #checkIfScriptsDownloadedAndStartDownloadingIfNot()}, {@link #startScriptReadingTask()}) is
+ * no longer called. It is kept so runtime downloading can be restored if we ever need it, but it must not be
+ * re-enabled for mraid.js without removing the bundled asset, since it would overwrite it.
  */
 public class JSLibraryManager {
 
@@ -44,6 +48,8 @@ public class JSLibraryManager {
      * OMID JS service and the native SDK can invalidate measurement, so both move in the same commit.
      */
     private static final String OMSDK_ASSET_PATH = "omsdk.js";
+
+    private static final String MRAID_ASSET_PATH = "mraid.js";
 
     private static JSLibraryManager sInstance;
 
@@ -99,7 +105,15 @@ public class JSLibraryManager {
         }
     }
 
-    public String getMRAIDScript() {
+    /**
+     * Lazy for the same reason as {@link #getOMSDKScript()}: a missing asset should log once, not break init.
+     *
+     * @return the MRAID JS bridge script, or an empty string if the asset could not be read.
+     */
+    public synchronized String getMRAIDScript() {
+        if (MRAIDscript.isEmpty()) {
+            MRAIDscript = readAsset(MRAID_ASSET_PATH);
+        }
         return MRAIDscript;
     }
 
