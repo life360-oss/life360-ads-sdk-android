@@ -3,11 +3,20 @@ name: Publish to Maven Central
 on:
   release:
     types: [published]
+  # Re-runs a failed deploy without recreating the release. Dispatch from develop
+  # so the latest workflow fixes apply; the sources still come from the tag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, e.g. v1.4.4
+        required: true
+        type: string
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     env:
+      RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
       GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xmx3g"
       GPG_KEYNAME: ${{ secrets.GPG_KEYNAME }}
       GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -16,6 +25,8 @@ jobs:
       CENTRAL_PASSWORD: ${{ secrets.CENTRAL_TOKEN_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
 
       - name: Set up JDK 17 + Maven settings.xml
         uses: actions/setup-java@v4
@@ -37,14 +48,19 @@ jobs:
       - name: Import GPG key
         run: |
           set -euo pipefail
-          printf '%s' "$GPG_PRIVATE_KEY" | tr -d ' \r\n' | base64 --decode | gpg --batch --import
+          # Accept the key either ASCII-armored as exported, or base64-encoded on top of that.
+          if printf '%s' "$GPG_PRIVATE_KEY" | grep -q -- '-----BEGIN PGP PRIVATE KEY BLOCK-----'; then
+            printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          else
+            printf '%s' "$GPG_PRIVATE_KEY" | tr -d ' \r\n' | base64 --decode | gpg --batch --import
+          fi
           echo "default-cache-ttl 7200" >> ~/.gnupg/gpg-agent.conf || true
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Derive & verify version from tag
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
+          TAG="${RELEASE_TAG#v}"
           GRADLE_VER=$(grep -E 'sdkVersionName' build.gradle | sed -E 's/.*"(.*)".*/\1/')
           if [ "$TAG" != "$GRADLE_VER" ]; then
             echo "::error::Tag ($TAG) != build.gradle sdkVersionName ($GRADLE_VER)"
