@@ -115,8 +115,10 @@ var printDebug = function(messageBuilder) {};
         allowOffscreen: true
     };
 
+    // Fixed bug in upstream mraid.js where initial exposure is reported at 100
+    // even when the ad is offscreen
      mraid.lastExposure = {
-         exposedPercentage: 100.0,
+         exposedPercentage: 0.0,
          visibleRectangle: {
             x: 0.0,
             y: 0.0,
