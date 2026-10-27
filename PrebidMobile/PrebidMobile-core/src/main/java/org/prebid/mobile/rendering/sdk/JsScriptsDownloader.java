@@ -27,6 +27,9 @@ import java.util.TreeSet;
  * If you need to work with JS scripts from the SDK use {@link JSLibraryManager},
  * because this class contains internal implementation.
  * <p>
+ * Not used at runtime: we load the bundled on-device mraid.js asset instead (see JSLibraryManager).
+ * Kept so runtime downloading can be restored if we ever need it.
+ * <p>
  * omsdk.js is deliberately not here: it ships as a packaged asset so that the version measurement
  * vendors see always matches the omsdk-android AAR compiled against. See {@link JSLibraryManager}.
  */
