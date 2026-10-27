@@ -25,7 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,7 +39,6 @@ import org.prebid.mobile.rendering.bidding.data.bid.Bid;
 import org.prebid.mobile.rendering.bidding.data.bid.BidResponse;
 import org.prebid.mobile.rendering.loading.AdLoadListener;
 import org.prebid.mobile.rendering.loading.VastParserExtractor;
-import org.prebid.mobile.rendering.sdk.JSLibraryManager;
 import org.prebid.mobile.test.utils.ResourceUtils;
 import org.prebid.mobile.test.utils.WhiteBox;
 import org.robolectric.RobolectricTestRunner;
@@ -57,8 +55,6 @@ public class CreativeModelMakerBidsTest {
     private AdLoadListener mockLoadListener;
     @Mock
     private VastParserExtractor mockExtractor;
-    @Mock
-    private JSLibraryManager mockJsManager;
 
     @Before
     public void setUp() throws Exception {
@@ -66,12 +62,6 @@ public class CreativeModelMakerBidsTest {
         modelMakerBids = new CreativeModelMakerBids(mockLoadListener);
 
         WhiteBox.setInternalState(modelMakerBids, "parserExtractor", mockExtractor);
-        WhiteBox.setStaticVariableTo(JSLibraryManager.class, "sInstance", mockJsManager);
-    }
-
-    @After
-    public void clean() {
-        WhiteBox.setStaticVariableTo(JSLibraryManager.class, "sInstance", null);
     }
 
 
@@ -96,21 +86,6 @@ public class CreativeModelMakerBidsTest {
     }
 
     @Test
-    public void whenScriptsAreNotDownloadedYet_CallErrorListener() throws IOException {
-        AdUnitConfiguration configuration = new AdUnitConfiguration();
-        configuration.setAdFormat(AdFormat.BANNER);
-
-        String responseString = ResourceUtils.convertResourceToString("bidding_response_obj.json");
-        BidResponse bidResponse = new BidResponse(responseString, new AdUnitConfiguration());
-
-        when(mockJsManager.checkIfScriptsDownloadedAndStartDownloadingIfNot()).thenReturn(false);
-
-        modelMakerBids.makeModels(configuration, bidResponse);
-
-        verify(mockLoadListener).onFailedToLoadAd(any(AdException.class), any());
-    }
-
-    @Test
     public void whenMakeModelsAndBidRequestContainsAcjAd_CreateAcjModel() throws IOException {
         AdUnitConfiguration configuration = new AdUnitConfiguration();
         configuration.setAdFormat(AdFormat.BANNER);
@@ -120,7 +95,6 @@ public class CreativeModelMakerBidsTest {
 
         ArgumentCaptor<CreativeModelsMaker.Result> resultArgumentCaptor = ArgumentCaptor.forClass(CreativeModelsMaker.Result.class);
 
-        when(mockJsManager.checkIfScriptsDownloadedAndStartDownloadingIfNot()).thenReturn(true);
 
         modelMakerBids.makeModels(configuration, bidResponse);
         verify(mockLoadListener).onCreativeModelReady(resultArgumentCaptor.capture());
@@ -135,7 +109,6 @@ public class CreativeModelMakerBidsTest {
 
     @Test
     public void bidType_banner() {
-        when(mockJsManager.checkIfScriptsDownloadedAndStartDownloadingIfNot()).thenReturn(true);
 
         AdUnitConfiguration configuration = new AdUnitConfiguration();
         BidResponse bidResponse = new BidResponse(ResourceUtils.convertResourceToString("bidding_response_obj.json"), new AdUnitConfiguration());
@@ -154,7 +127,6 @@ public class CreativeModelMakerBidsTest {
 
     @Test
     public void bidType_video() {
-        when(mockJsManager.checkIfScriptsDownloadedAndStartDownloadingIfNot()).thenReturn(true);
 
         AdUnitConfiguration configuration = new AdUnitConfiguration();
         BidResponse bidResponse = new BidResponse(ResourceUtils.convertResourceToString("auction_response_video_type.json"), new AdUnitConfiguration());

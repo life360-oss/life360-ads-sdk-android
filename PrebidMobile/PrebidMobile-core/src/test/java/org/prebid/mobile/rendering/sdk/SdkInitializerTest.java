@@ -71,6 +71,9 @@ public class SdkInitializerTest {
     public void setUp() throws Exception {
         server = new MockWebServer();
         context = Robolectric.buildActivity(Activity.class).create().get();
+        // Robolectric can only initialize AsyncTask on the test thread, but /status runs on a pool thread.
+        // init() used to warm it as a side effect of the mraid.js download check.
+        Class.forName("android.os.AsyncTask");
         reset();
     }
 

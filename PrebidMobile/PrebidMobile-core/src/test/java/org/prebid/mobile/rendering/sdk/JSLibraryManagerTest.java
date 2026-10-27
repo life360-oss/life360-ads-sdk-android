@@ -71,14 +71,30 @@ public class JSLibraryManagerTest {
     }
 
     /**
-     * mraid.js still downloads, so it must stay empty until that completes — the asset change must not
-     * have accidentally made it look available.
+     * The bundled mraid.js must be readable on first call — an empty script on cold start means the first
+     * ads render without the MRAID bridge.
      */
     @Test
-    public void getMRAIDScript_emptyBeforeDownloadCompletes() {
+    public void getMRAIDScript_readsBundledAssetImmediately() {
         Context context = RuntimeEnvironment.getApplication();
 
-        assertTrue(JSLibraryManager.getInstance(context).getMRAIDScript().isEmpty());
+        String script = JSLibraryManager.getInstance(context).getMRAIDScript();
+
+        assertFalse("mraid.js asset should be readable without any download", script.isEmpty());
+        assertTrue(script.contains("mraid.lastExposure"));
+    }
+
+    /**
+     * addEventListener('exposureChange') replays this value before native reports, so a 100% placeholder
+     * starts the viewability timer for ads that are still off-screen.
+     */
+    @Test
+    public void getMRAIDScript_unmeasuredExposureIsZero() {
+        Context context = RuntimeEnvironment.getApplication();
+
+        String script = JSLibraryManager.getInstance(context).getMRAIDScript();
+
+        assertTrue(script.replaceAll("\\s+", "").contains("mraid.lastExposure={exposedPercentage:0.0,"));
     }
 
 }
