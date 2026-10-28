@@ -14,8 +14,7 @@ on:
 
 jobs:
   publish:
-    # Pinned: the GPG secret stopped decoding once ubuntu-latest moved to 26.04, whose base64 is stricter.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
       GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xmx3g"
