@@ -60,7 +60,7 @@ NAMESPACE="com.life360"
 
 RELEASE_URL="https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
 SNAPSHOT_URL="https://central.sonatype.com/repository/maven-snapshots/"
-REPO_ID="sonatype-central"
+REPO_ID="central"
 
 DEPLOY_URL="${RELEASE_URL}"
 if $IS_SNAPSHOT; then
@@ -178,7 +178,7 @@ function replace_version_placeholder() {
 # load_maven_central_creds [serverId] [settingsPath]
 # -------------------------------------------------
 function load_maven_central_creds() {
-  local SERVER_ID="${1:-sonatype-central}"
+  local SERVER_ID="${1:-central}"
   local SETTINGS_PATH="${2:-$HOME/.m2/settings.xml}"
 
   if [[ ! -f "$SETTINGS_PATH" ]]; then
