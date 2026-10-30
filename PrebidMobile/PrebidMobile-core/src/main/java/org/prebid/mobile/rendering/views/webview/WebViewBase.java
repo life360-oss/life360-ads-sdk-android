@@ -304,7 +304,7 @@ public class WebViewBase extends AdWebView implements AdAssetsLoadedListener {
         String meta = buildViewportMetaTag();
         String centerAdStyle = "<style type='text/css'>html,body {margin: 0;padding: 0;width: 100%;height: 100%;}html {display: table;}body {display: block;vertical-align: middle;text-align: center;}</style>";
 
-        originalHtml = "<html><head>" + meta
+        originalHtml = "<html><head>" + meta + "</head>"
 
                        + "<body>"
                        + centerAdStyle
@@ -349,7 +349,7 @@ public class WebViewBase extends AdWebView implements AdAssetsLoadedListener {
         if (scale != null && !scale.isEmpty()) {
             metaTag = "<meta name='viewport' content='width=device-width, initial-scale=" + scale + ", minimum-scale=0.01' />";
         } else {
-            metaTag = "<meta name='viewport' content='width=device-width' />";
+            metaTag = "<meta name='viewport' content='width=device-width, initial-scale=1' />";
         }
         return metaTag;
     }
